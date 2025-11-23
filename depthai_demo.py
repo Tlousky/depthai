@@ -254,10 +254,20 @@ class Demo:
             if self._conf.irEnabled(self._device):
                 self._pm.updateIrConfig(self._device, self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness)
 
-            self._encManager = None
-            if len(self._conf.args.encode) > 0:
-                self._encManager = EncodingManager(self._conf.args.encode, self._conf.args.encodeOutput)
-                self._encManager.createEncoders(self._pm)
+            # Always create encoding manager with default encoders for all available streams
+            # This allows recording to be toggled on/off without restarting the pipeline
+            default_encode_config = {
+                Previews.color.name: 30,
+            }
+            
+            # Add depth-related streams if depth is enabled
+            if self._conf.useDepth:
+                default_encode_config[Previews.left.name] = 30
+                default_encode_config[Previews.right.name] = 30
+                default_encode_config[Previews.disparity.name] = 30
+            
+            self._encManager = EncodingManager(default_encode_config, self._conf.args.encodeOutput)
+            self._encManager.createEncoders(self._pm)
 
         if len(self._conf.args.report) > 0:
             self._pm.createSystemLogger()

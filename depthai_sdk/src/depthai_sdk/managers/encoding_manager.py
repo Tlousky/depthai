@@ -58,10 +58,22 @@ class EncodingManager:
             self._encodingFiles[cameraName] = (self.encodeOutput / cameraName).with_suffix(suffix).open('wb')
 
     def stopRecording(self):
-        for name, file in self._encodingFiles.items():
+        if not self._encodingFiles:
+            print("No recording in progress.")
+            return
+            
+        # Save references before clearing
+        files_to_convert = dict(self._encodingFiles)
+        
+        # Close all files
+        for name, file in files_to_convert.items():
             file.close()
+        
+        # Clear the active files dict
         self._encodingFiles.clear()
-        self.close() # Convert to mp4
+        
+        # Convert to mp4
+        self._convertToMp4(files_to_convert)
 
     def parseQueues(self):
         """
@@ -73,9 +85,9 @@ class EncodingManager:
                 if name in self._encodingFiles:
                     data.tofile(self._encodingFiles[name])
 
-    def close(self):
+    def _convertToMp4(self, files_dict):
         """
-        Closes opened stream files and tries to perform FFMPEG-based conversion from raw stream into mp4 video.
+        Tries to perform FFMPEG-based conversion from raw stream into mp4 video.
 
         If successful, each stream file (e.g. :code:`color.h265`) will be available along with a ready to use video file
         (e.g. :code:`color.mp4`).
@@ -87,17 +99,12 @@ class EncodingManager:
             print(
                 "To view the encoded data, convert the stream file (.h264/.h265) into a video file (.mp4), using commands below:")
             cmd = "ffmpeg -framerate {} -i {} -c copy {}"
-            for name, file in self._encodingFiles.items():
+            for name, file in files_dict.items():
                 print(cmd.format(self._encodingNodes[name].getFrameRate(), file.name, str(Path(file.name).with_suffix('.mp4'))))
 
-        for queue in self._encodingQueues.values():
-            queue.close()
-
-        for name, file in self._encodingFiles.items():
-            file.close()
         try:
             import ffmpy3
-            for name, file in self._encodingFiles.items():
+            for name, file in files_dict.items():
                 fps = self._encodingNodes[name].getFrameRate()
                 outName = str(Path(file.name).with_suffix('.mp4'))
                 try:
@@ -116,13 +123,27 @@ class EncodingManager:
                     traceback.print_exc()
                     printManual()
             print("Video conversion complete!")
-            for name, file in self._encodingFiles.items():
+            for name, file in files_dict.items():
                 print("Produced file: {}".format(str(Path(file.name).with_suffix('.mp4'))))
         except ImportError:
-            print("Module ffmpy3 not fouund!")
+            print("Module ffmpy3 not found!")
             traceback.print_exc()
             printManual()
         except:
             print("Unknown error!")
             traceback.print_exc()
             printManual()
+
+    def close(self):
+        """
+        Closes opened stream files and output queues. Called when demo is stopped.
+        """
+        for queue in self._encodingQueues.values():
+            queue.close()
+
+        if self._encodingFiles:
+            files_to_convert = dict(self._encodingFiles)
+            for name, file in files_to_convert.items():
+                file.close()
+            self._encodingFiles.clear()
+            self._convertToMp4(files_to_convert)
