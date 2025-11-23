@@ -115,7 +115,50 @@ ListView {
             text: qsTr("<font color=\"white\">Right</font>")
             bottomPadding: 5
             onToggled: {
-                appBridge.toggleRightEncoding(encLeftSwitch.checked, encLeftFps.text)
+                appBridge.toggleRightEncoding(encRightSwitch.checked, encRightFps.text)
+            }
+        }
+
+        TextField {
+            enabled: depthEnabled
+            id: encDepthFps
+            x: 140
+            y: 143
+            width: 83
+            height: 27
+            bottomPadding: 7
+            validator: IntValidator {}
+            placeholderText: qsTr("FPS")
+            onEditingFinished: {
+                appBridge.toggleDepthEncoding(encDepthSwitch.checked, encDepthFps.text)
+            }
+        }
+
+        Switch {
+            enabled: depthEnabled
+            id: encDepthSwitch
+            x: 8
+            y: 143
+            width: 150
+            height: 27
+            text: qsTr("<font color=\"white\">Depth</font>")
+            bottomPadding: 5
+            onToggled: {
+                appBridge.toggleDepthEncoding(encDepthSwitch.checked, encDepthFps.text)
+            }
+        }
+
+        Switch {
+            enabled: depthEnabled
+            id: encPointCloudSwitch
+            x: 8
+            y: 176
+            width: 185
+            height: 27
+            text: qsTr("<font color=\"white\">Point Cloud</font>")
+            bottomPadding: 5
+            onToggled: {
+                appBridge.togglePointCloud(encPointCloudSwitch.checked)
             }
         }
 

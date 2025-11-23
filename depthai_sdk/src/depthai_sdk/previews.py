@@ -233,16 +233,16 @@ class Previews(enum.Enum):
 
     Can be also used as e.g. :code:`Previews.color.value(packet)` to transform queue output packet to color camera frame
     """
-    nnInput = partial(PreviewDecoder.nnInput)
-    color = partial(PreviewDecoder.color)
-    left = partial(PreviewDecoder.left)
-    right = partial(PreviewDecoder.right)
-    rectifiedLeft = partial(PreviewDecoder.rectifiedLeft)
-    rectifiedRight = partial(PreviewDecoder.rectifiedRight)
-    depthRaw = partial(PreviewDecoder.depthRaw)
-    depth = partial(PreviewDecoder.depth)
-    disparity = partial(PreviewDecoder.disparity)
-    disparityColor = partial(PreviewDecoder.disparityColor)
+    nnInput = enum.member(partial(PreviewDecoder.nnInput))
+    color = enum.member(partial(PreviewDecoder.color))
+    left = enum.member(partial(PreviewDecoder.left))
+    right = enum.member(partial(PreviewDecoder.right))
+    rectifiedLeft = enum.member(partial(PreviewDecoder.rectifiedLeft))
+    rectifiedRight = enum.member(partial(PreviewDecoder.rectifiedRight))
+    depthRaw = enum.member(partial(PreviewDecoder.depthRaw))
+    depth = enum.member(partial(PreviewDecoder.depth))
+    disparity = enum.member(partial(PreviewDecoder.disparity))
+    disparityColor = enum.member(partial(PreviewDecoder.disparityColor))
 
 
 class MouseClickTracker:

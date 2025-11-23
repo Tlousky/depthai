@@ -48,6 +48,16 @@ ListView {
             onClicked: appBridge.reloadDevices()
         }
 
+        Button {
+            id: recordButton
+            x: 580
+            y: 5
+            height: 30
+            width: 100
+            text: recording ? "Stop" : "Record"
+            onClicked: appBridge.toggleRecording()
+        }
+
         ImageWriter {
             id: imageWriter
             objectName: "writer"

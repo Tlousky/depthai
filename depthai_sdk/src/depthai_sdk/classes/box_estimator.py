@@ -2,7 +2,10 @@ import numpy as np
 import cv2
 import random
 from typing import Tuple
-import open3d as o3d
+try:
+    import open3d as o3d
+except ImportError:
+    o3d = None
 import json
 from depthai_sdk.logger import LOGGER
 

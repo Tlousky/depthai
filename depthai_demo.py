@@ -147,6 +147,10 @@ class Demo:
         self.showDownloadProgress = showDownloadProgress
         self.onAppSetup = onAppSetup
         self.onAppStart = onAppStart
+        self.recording = False
+        self.pointCloudEnabled = False
+        self._lastDepthFrame = None
+        self._lastColorFrame = None
 
     def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
@@ -269,6 +273,66 @@ class Demo:
             self._pm.addNn(nn=self._nn, xoutNnInput=Previews.nnInput.name in self._conf.args.show,
                            xoutSbb=self._conf.args.spatialBoundingBox and self._conf.useDepth)
 
+    def startRecording(self):
+        if self._encManager is not None:
+            self._encManager.startRecording(self._conf.args.encodeOutput)
+        self.recording = True
+        print("Recording started.")
+
+    def stopRecording(self):
+        self.recording = False
+        if self._encManager is not None:
+            self._encManager.stopRecording()
+        if self.pointCloudEnabled:
+            self.savePointCloud()
+        print("Recording stopped.")
+
+    def savePointCloud(self):
+        if self._lastDepthFrame is None:
+            print("No depth frame available for Point Cloud.")
+            return
+        
+        print("Saving Point Cloud...")
+        try:
+            import open3d as o3d
+        except ImportError:
+            print("Open3D not installed. Skipping Point Cloud save.")
+            return
+
+        try:
+            depth = self._lastDepthFrame
+            color = self._lastColorFrame
+            
+            # Create Point Cloud
+            rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(
+                o3d.geometry.Image(color), 
+                o3d.geometry.Image(depth), 
+                convert_rgb_to_intensity=False
+            )
+            
+            # Intrinsic parameters (approximate or get from device)
+            # For now, using default or extracting from calibration if possible
+            # But getting calibration here is complex. Using default PinholeCameraIntrinsic
+            intrinsic = o3d.camera.PinholeCameraIntrinsic(
+                o3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault)
+            
+            pcd = o3d.geometry.PointCloud.create_from_rgbd_image(
+                rgbd_image, intrinsic)
+            
+            # Flip it, otherwise the pointcloud will be upside down
+            pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+            
+            output_path = Path(self._conf.args.encodeOutput) if self._conf.args.encodeOutput else Path.cwd()
+            if not output_path.exists():
+                output_path.mkdir(parents=True, exist_ok=True)
+            
+            filename = output_path / f"pointcloud_{int(time.time())}.ply"
+            o3d.io.write_point_cloud(str(filename), pcd)
+            print(f"Point Cloud saved to {filename}")
+        except Exception as e:
+            print(f"Failed to save Point Cloud: {e}")
+            traceback.print_exc()
+
     def run(self):
         self._device.startPipeline(self._pm.pipeline)
         self._pm.createDefaultQueues(self._device)
@@ -374,6 +438,16 @@ class Demo:
             self._pv.prepareFrames(callback=self.onNewFrame)
             if self._encManager is not None:
                 self._encManager.parseQueues()
+            
+            # Capture frames for Point Cloud
+            if self.pointCloudEnabled:
+                depth = self._pv.get(Previews.depthRaw.name)
+                if depth is not None:
+                    self._lastDepthFrame = depth
+                
+                color = self._pv.get(Previews.color.name)
+                if color is not None:
+                    self._lastColorFrame = color
 
             if self._sbbOut is not None:
                 sbb = self._sbbOut.tryGet()
@@ -1028,6 +1102,24 @@ def runQt():
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
+        def guiOnToggleDepthEncoding(self, enabled, fps):
+            oldConfig = self.confManager.args.encode or {}
+            if enabled:
+                oldConfig["disparity"] = fps
+            elif "disparity" in self.confManager.args.encode:
+                del oldConfig["disparity"]
+            self.updateArg("encode", oldConfig)
+
+        def guiOnTogglePointCloud(self, enabled):
+            self._demoInstance.pointCloudEnabled = enabled
+
+        def guiOnToggleRecording(self):
+            if self._demoInstance.recording:
+                self._demoInstance.stopRecording()
+            else:
+                self._demoInstance.startRecording()
+            self.window.setProperty("recording", self._demoInstance.recording)
+
     app = GuiApp()
     signal.signal(signal.SIGINT, app.stopGui)
     signal.signal(signal.SIGTERM, app.stopGui)

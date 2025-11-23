@@ -120,6 +120,18 @@ class AppBridge(QObject):
     def toggleDisparity(self, enabled):
         instance.guiOnToggleDisparity(enabled)
 
+    @pyqtSlot(bool, int)
+    def toggleDepthEncoding(self, enabled, fps):
+        instance.guiOnToggleDepthEncoding(enabled, fps)
+
+    @pyqtSlot(bool)
+    def togglePointCloud(self, enabled):
+        instance.guiOnTogglePointCloud(enabled)
+
+    @pyqtSlot()
+    def toggleRecording(self):
+        instance.guiOnToggleRecording()
+
 
 # @QmlElement
 class AIBridge(QObject):

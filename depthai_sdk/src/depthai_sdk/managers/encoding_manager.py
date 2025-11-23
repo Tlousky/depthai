@@ -39,19 +39,29 @@ class EncodingManager:
 
     def createDefaultQueues(self, device):
         """
-        Creates output queues for VideoEncoder nodes created in :code:`create_encoders` function. Also, opems up
-        the H.264 / H.265 stream files (e.g. :code:`color.h265`) where the encoded data will be stored.
-
-        Args:
-            device (depthai.Device): Running device instance
+        Creates output queues for VideoEncoder nodes created in :code:`create_encoders` function.
         """
         self._encodingQueues.clear()
         self._encodingFiles.clear()
 
         for cameraName, node in self._encodingNodes.items():
             self._encodingQueues[cameraName] = device.getOutputQueue(cameraName + "EncXout", maxSize=30, blocking=True)
+
+    def startRecording(self, output_path=None):
+        if output_path is not None:
+            self.encodeOutput = Path(output_path)
+            if not self.encodeOutput.exists():
+                os.makedirs(self.encodeOutput, exist_ok=True)
+
+        for cameraName, node in self._encodingNodes.items():
             suffix = ".h265" if node.getProfile() == dai.VideoEncoderProperties.Profile.H265_MAIN else ".h264"
             self._encodingFiles[cameraName] = (self.encodeOutput / cameraName).with_suffix(suffix).open('wb')
+
+    def stopRecording(self):
+        for name, file in self._encodingFiles.items():
+            file.close()
+        self._encodingFiles.clear()
+        self.close() # Convert to mp4
 
     def parseQueues(self):
         """
@@ -59,7 +69,9 @@ class EncodingManager:
         """
         for name, queue in self._encodingQueues.items():
             while queue.has():
-                queue.get().getData().tofile(self._encodingFiles[name])
+                data = queue.get().getData()
+                if name in self._encodingFiles:
+                    data.tofile(self._encodingFiles[name])
 
     def close(self):
         """

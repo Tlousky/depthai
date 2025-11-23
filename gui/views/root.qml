@@ -79,6 +79,7 @@ ApplicationWindow {
     property var depthEnabled: true
     property var statisticsAccepted: true
     property var runningApp
+    property bool recording: false
 
     property bool lrc: false
 
