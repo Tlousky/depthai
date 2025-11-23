@@ -34,25 +34,12 @@ ListView {
             font.styleName: "Regular"
         }
 
-        TextField {
-            id: encColorFps
-            x: 140
-            y: 44
-            width: 83
-            height: 27
-            bottomPadding: 7
-            validator: IntValidator {}
-            placeholderText: qsTr("FPS")
-            onEditingFinished: {
-                appBridge.toggleColorEncoding(encColorSwitch.checked, encColorFps.text)
-            }
-        }
-
+        // Column 1 - Row 1: Color
         Switch {
             id: encColorSwitch
             x: 8
             y: 44
-            width: 150
+            width: 130
             height: 27
             text: qsTr("<font color=\"white\">Color</font>")
             bottomPadding: 5
@@ -62,55 +49,26 @@ ListView {
         }
 
         TextField {
-            enabled: depthEnabled
-            id: encLeftFps
-            x: 140
-            y: 77
-            width: 83
+            id: encColorFps
+            x: 145
+            y: 44
+            width: 60
             height: 27
             bottomPadding: 7
             validator: IntValidator {}
             placeholderText: qsTr("FPS")
             onEditingFinished: {
-                appBridge.toggleLeftEncoding(encLeftSwitch.checked, encLeftFps.text)
+                appBridge.toggleColorEncoding(encColorSwitch.checked, encColorFps.text)
             }
         }
 
-        Switch {
-            enabled: depthEnabled
-            id: encLeftSwitch
-            x: 8
-            y: 77
-            width: 150
-            height: 27
-            text: qsTr("<font color=\"white\">Left</font>")
-            bottomPadding: 5
-            onToggled: {
-                appBridge.toggleLeftEncoding(encLeftSwitch.checked, encLeftFps.text)
-            }
-        }
-
-        TextField {
-            enabled: depthEnabled
-            id: encRightFps
-            x: 140
-            y: 110
-            width: 83
-            height: 27
-            bottomPadding: 7
-            validator: IntValidator {}
-            placeholderText: qsTr("FPS")
-            onEditingFinished: {
-                appBridge.toggleRightEncoding(encRightSwitch.checked, encRightFps.text)
-            }
-        }
-
+        // Column 2 - Row 1: Right
         Switch {
             enabled: depthEnabled
             id: encRightSwitch
-            x: 8
-            y: 110
-            width: 150
+            x: 230
+            y: 44
+            width: 130
             height: 27
             text: qsTr("<font color=\"white\">Right</font>")
             bottomPadding: 5
@@ -121,10 +79,70 @@ ListView {
 
         TextField {
             enabled: depthEnabled
+            id: encRightFps
+            x: 367
+            y: 44
+            width: 60
+            height: 27
+            bottomPadding: 7
+            validator: IntValidator {}
+            placeholderText: qsTr("FPS")
+            onEditingFinished: {
+                appBridge.toggleRightEncoding(encRightSwitch.checked, encRightFps.text)
+            }
+        }
+
+        // Column 1 - Row 2: Left
+        Switch {
+            enabled: depthEnabled
+            id: encLeftSwitch
+            x: 8
+            y: 77
+            width: 130
+            height: 27
+            text: qsTr("<font color=\"white\">Left</font>")
+            bottomPadding: 5
+            onToggled: {
+                appBridge.toggleLeftEncoding(encLeftSwitch.checked, encLeftFps.text)
+            }
+        }
+
+        TextField {
+            enabled: depthEnabled
+            id: encLeftFps
+            x: 145
+            y: 77
+            width: 60
+            height: 27
+            bottomPadding: 7
+            validator: IntValidator {}
+            placeholderText: qsTr("FPS")
+            onEditingFinished: {
+                appBridge.toggleLeftEncoding(encLeftSwitch.checked, encLeftFps.text)
+            }
+        }
+
+        // Column 2 - Row 2: Depth
+        Switch {
+            enabled: depthEnabled
+            id: encDepthSwitch
+            x: 230
+            y: 77
+            width: 130
+            height: 27
+            text: qsTr("<font color=\"white\">Depth</font>")
+            bottomPadding: 5
+            onToggled: {
+                appBridge.toggleDepthEncoding(encDepthSwitch.checked, encDepthFps.text)
+            }
+        }
+
+        TextField {
+            enabled: depthEnabled
             id: encDepthFps
-            x: 140
-            y: 143
-            width: 83
+            x: 367
+            y: 77
+            width: 60
             height: 27
             bottomPadding: 7
             validator: IntValidator {}
@@ -134,26 +152,13 @@ ListView {
             }
         }
 
-        Switch {
-            enabled: depthEnabled
-            id: encDepthSwitch
-            x: 8
-            y: 143
-            width: 150
-            height: 27
-            text: qsTr("<font color=\"white\">Depth</font>")
-            bottomPadding: 5
-            onToggled: {
-                appBridge.toggleDepthEncoding(encDepthSwitch.checked, encDepthFps.text)
-            }
-        }
-
+        // Column 1 - Row 3: Point Cloud
         Switch {
             enabled: depthEnabled
             id: encPointCloudSwitch
             x: 8
-            y: 176
-            width: 185
+            y: 110
+            width: 197
             height: 27
             text: qsTr("<font color=\"white\">Point Cloud</font>")
             bottomPadding: 5
