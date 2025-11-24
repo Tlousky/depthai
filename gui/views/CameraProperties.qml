@@ -583,6 +583,7 @@ ListView {
             y: 158
             width: 164
             height: 28
+            checked: true
             text: qsTr("<font color=\"white\">Enable sync</font>")
             onToggled: {
                 appBridge.toggleSync(syncSwitch.checked)

@@ -43,6 +43,7 @@ ListView {
             width: 130
             height: 27
             text: qsTr("<font color=\"white\">Color</font>")
+            checked: true
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleColorEncoding(encColorSwitch.checked, encColorFps.text)
@@ -132,6 +133,7 @@ ListView {
             width: 130
             height: 27
             text: qsTr("<font color=\"white\">Depth</font>")
+            checked: true
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleDepthEncoding(encDepthSwitch.checked, encDepthFps.text)

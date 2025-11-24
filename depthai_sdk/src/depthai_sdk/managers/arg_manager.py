@@ -207,7 +207,7 @@ class ArgsManager():
                                                                                                                     "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
         parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv"], help="Specify GUI type of the demo. \"cv\" uses built-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
         parser.add_argument('-usbs', '--usbSpeed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
-        parser.add_argument('-enc', '--encode', type=_commaSeparated(default=30.0, cast=float), nargs="+", default=[],
+        parser.add_argument('-enc', '--encode', type=_commaSeparated(default=30.0, cast=float), nargs="+", default=[("color", 30.0), ("disparity", 30.0)],
                             help="Define which cameras to encode (record) \n"
                                 "Format: cameraName or cameraName,encFps \n"
                                 "Example: -enc left color \n"
@@ -220,11 +220,11 @@ class ArgsManager():
                                 "Format: camera_name,camera_orientation \n"
                                 "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(_orientationChoices))
                             )
-        parser.add_argument("--irDotBrightness", type=_checkRange(0, 1200), default=0, help="For OAK-D Pro: specify IR dot projector brightness, range: 0..1200 [mA], default 0 (turned off)")
-        parser.add_argument("--irFloodBrightness", type=_checkRange(0, 1500), default=0, help="For OAK-D Pro: specify IR flood illumination brightness, range: 0..1500 [mA], default 0 (turned off)")
+        parser.add_argument("--irDotBrightness", type=_checkRange(0, 1200), default=550, help="For OAK-D Pro: specify IR dot projector brightness, range: 0..1200 [mA], default 550")
+        parser.add_argument("--irFloodBrightness", type=_checkRange(0, 1500), default=550, help="For OAK-D Pro: specify IR flood illumination brightness, range: 0..1500 [mA], default 550")
         parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
         parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
-        parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
+        parser.add_argument('--sync', action="store_true", default=True, help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
         parser.add_argument('--noRgbDepthAlign', action="store_true", help="Disable RGB-Depth align (depth frame will be aligned with the RGB frame)")
         parser.add_argument('--debug', action="store_true", help="Enables debug mode. Capability to connect to already BOOTED devices and also implicitly disables version check")
         parser.add_argument("-app","--app", type=str, choices=["uvc", "record"], help="Specify which app to run instead of the demo")

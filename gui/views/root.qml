@@ -57,7 +57,7 @@ import QtQuick.Controls.Material 2.1
 import dai.gui 1.0
 
 ApplicationWindow {
-    width: 1270
+    width: 1600
     height: 640
     Material.theme: Material.Dark
     Material.accent: Material.Red

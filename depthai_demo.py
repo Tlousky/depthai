@@ -285,7 +285,8 @@ class Demo:
 
     def startRecording(self):
         if self._encManager is not None:
-            self._encManager.startRecording(self._conf.args.encodeOutput)
+            enabled_streams = list(self._conf.args.encode.keys()) if self._conf.args.encode else None
+            self._encManager.startRecording(self._conf.args.encodeOutput, enabled_streams)
         self.recording = True
         print("Recording started.")
 
