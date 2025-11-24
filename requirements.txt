@@ -9,3 +9,10 @@ depthai==2.30.0.0
 Qt.py
 scipy
 matplotlib
+xmltodict
+marshmallow==3.17.0
+PyTurboJPEG==1.6.4
+ahrs==0.3.1
+depthai-pipeline-graph==0.0.5
+blobconverter>=1.4.1
+pytube>=12.1.0

@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
+import QtQuick.Dialogs 1.3
 
 ListView {
     id: miscProperties
@@ -247,17 +248,43 @@ ListView {
             font.family: "Courier"
         }
 
+        FileDialog {
+            id: encodingFolderDialog
+            title: "Select Recording Destination Folder"
+            selectFolder: true
+            selectMultiple: false
+            onAccepted: {
+                var path = encodingFolderDialog.fileUrl.toString()
+                // Remove file:/// prefix
+                path = path.replace(/^(file:\/{3})/, "")
+                // Convert forward slashes to backslashes on Windows
+                path = path.replace(/\//g, "\\")
+                textField4.text = path
+                appBridge.selectEncodingPath(path)
+            }
+        }
+
         TextField {
             id: textField4
             x: 116
             y: 150
-            width: 170
+            width: 240
             height: 27
             bottomPadding: 7
             placeholderText: qsTr("/path/to/output/directory/")
             onEditingFinished: {
                 appBridge.selectEncodingPath(text)
             }
+        }
+
+        Button {
+            id: browseEncodingButton
+            x: 362
+            y: 150
+            width: 65
+            height: 27
+            text: "Browse"
+            onClicked: encodingFolderDialog.open()
         }
 
         Text {
