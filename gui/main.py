@@ -128,6 +128,10 @@ class AppBridge(QObject):
     def togglePointCloud(self, enabled):
         instance.guiOnTogglePointCloud(enabled)
 
+    @pyqtSlot(bool, int)
+    def toggleIrEncoding(self, enabled, fps):
+        instance.guiOnToggleIrEncoding(enabled, fps)
+
     @pyqtSlot()
     def toggleRecording(self):
         instance.guiOnToggleRecording()

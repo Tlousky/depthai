@@ -47,7 +47,7 @@ class EncodingManager:
         for cameraName, node in self._encodingNodes.items():
             self._encodingQueues[cameraName] = device.getOutputQueue(cameraName + "EncXout", maxSize=30, blocking=True)
 
-    def startRecording(self, output_path=None, enabled_streams=None):
+    def startRecording(self, output_path=None, enabled_streams=None, filename_prefix=None):
         if output_path is not None:
             self.encodeOutput = Path(output_path)
             if not self.encodeOutput.exists():
@@ -57,7 +57,13 @@ class EncodingManager:
             if enabled_streams is not None and cameraName not in enabled_streams:
                 continue
             suffix = ".h265" if node.getProfile() == dai.VideoEncoderProperties.Profile.H265_MAIN else ".h264"
-            self._encodingFiles[cameraName] = (self.encodeOutput / cameraName).with_suffix(suffix).open('wb')
+            
+            if filename_prefix:
+                filename = f"{filename_prefix}_{cameraName}{suffix}"
+            else:
+                filename = f"{cameraName}{suffix}"
+                
+            self._encodingFiles[cameraName] = (self.encodeOutput / filename).open('wb')
 
     def stopRecording(self):
         if not self._encodingFiles:

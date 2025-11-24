@@ -14,6 +14,8 @@ from functools import cmp_to_key
 from itertools import cycle
 import platform
 from pathlib import Path
+import uuid
+from datetime import datetime
 
 if platform.machine() == 'aarch64':  # Jetson
     os.environ['OPENBLAS_CORETYPE'] = "ARMV8"
@@ -285,8 +287,13 @@ class Demo:
 
     def startRecording(self):
         if self._encManager is not None:
+            # Generate prefix: timestamp_uuid6
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            uuid_str = str(uuid.uuid4())[:6]
+            self._filenamePrefix = f"{timestamp}_{uuid_str}"
+            
             enabled_streams = list(self._conf.args.encode.keys()) if self._conf.args.encode else None
-            self._encManager.startRecording(self._conf.args.encodeOutput, enabled_streams)
+            self._encManager.startRecording(self._conf.args.encodeOutput, enabled_streams, self._filenamePrefix)
         self.recording = True
         print("Recording started.")
 
@@ -337,7 +344,7 @@ class Demo:
             if not output_path.exists():
                 output_path.mkdir(parents=True, exist_ok=True)
             
-            filename = output_path / f"pointcloud_{int(time.time())}.ply"
+            filename = output_path / f"{getattr(self, '_filenamePrefix', f'pointcloud_{int(time.time())}')}_pointcloud.ply"
             o3d.io.write_point_cloud(str(filename), pcd)
             print(f"Point Cloud saved to {filename}")
         except Exception as e:
@@ -1038,6 +1045,14 @@ def runQt():
                 oldConfig["right"] = fps
             elif "color" in self.confManager.args.encode:
                 del oldConfig["right"]
+            self.updateArg("encode", oldConfig)
+
+        def guiOnToggleIrEncoding(self, enabled, fps):
+            oldConfig = self.confManager.args.encode or {}
+            if enabled:
+                oldConfig["ir"] = fps
+            elif "ir" in self.confManager.args.encode:
+                del oldConfig["ir"]
             self.updateArg("encode", oldConfig)
 
         def guiOnSelectReportingOptions(self, temp, cpu, memory):

@@ -170,6 +170,36 @@ ListView {
             }
         }
 
+        // Column 2 - Row 3: IR
+        Switch {
+            enabled: depthEnabled
+            id: encIrSwitch
+            x: 230
+            y: 110
+            width: 130
+            height: 27
+            text: qsTr("<font color=\"white\">IR</font>")
+            bottomPadding: 5
+            onToggled: {
+                appBridge.toggleIrEncoding(encIrSwitch.checked, encIrFps.text)
+            }
+        }
+
+        TextField {
+            enabled: depthEnabled
+            id: encIrFps
+            x: 367
+            y: 110
+            width: 60
+            height: 27
+            bottomPadding: 7
+            validator: IntValidator {}
+            placeholderText: qsTr("FPS")
+            onEditingFinished: {
+                appBridge.toggleIrEncoding(encIrSwitch.checked, encIrFps.text)
+            }
+        }
+
         Text {
             id: text3
             x: 8

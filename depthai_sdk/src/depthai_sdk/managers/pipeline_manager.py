@@ -662,7 +662,7 @@ class PipelineManager:
             ValueError: if cameraName is not a supported camera name
             RuntimeError: if specified camera node was not present
         """
-        allowedSources = [Previews.left.name, Previews.right.name, Previews.color.name, Previews.disparity.name]
+        allowedSources = [Previews.left.name, Previews.right.name, Previews.color.name, Previews.disparity.name, "ir"]
         if cameraName not in allowedSources:
             raise ValueError(
                 "Camera param invalid, received {}, available choices: {}".format(cameraName, allowedSources))
@@ -688,6 +688,10 @@ class PipelineManager:
             if not hasattr(self.nodes, 'stereo'):
                 raise RuntimeError("Stereo depth not initialized. Call createDepth() first!")
             encIn = self.nodes.stereo.disparity
+        elif cameraName == "ir":
+            if not hasattr(self.nodes, 'monoLeft'):
+                raise RuntimeError("Left mono camera (IR) not initialized. Call createLeftCam(res, fps) first!")
+            encIn = self.nodes.monoLeft.out
 
         enc = self.pipeline.createVideoEncoder()
         enc.setDefaultProfilePreset(encFps, encProfile)
