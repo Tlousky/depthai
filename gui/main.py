@@ -13,7 +13,8 @@ import depthai as dai
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
 from PyQt5.QtWidgets import QApplication
-from depthai_sdk import Previews, resizeLetterbox, createBlankFrame
+from depthai_sdk.previews import Previews
+from depthai_sdk.utils import resizeLetterbox, createBlankFrame
 
 # If BGR format is available
 colorMode = QImage.Format_RGB888

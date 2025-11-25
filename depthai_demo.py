@@ -36,6 +36,13 @@ except Exception as ex:
     print("Run \"python3 install_requirements.py\" to install dependencies")
     sys.exit(42)
 
+# Inject default args if compiled with Nuitka
+if "__compiled__" in globals():
+    if "--guiType" not in sys.argv:
+        sys.argv.extend(["--guiType", "qt"])
+    if "--skipVersionCheck" not in sys.argv:
+        sys.argv.append("--skipVersionCheck")
+
 app = ArgsManager.parseApp()
 
 if __name__ == "__main__":
@@ -54,7 +61,7 @@ from log_system_information import make_sys_report
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import checkRequirementsVersion
-from depthai_sdk import loadModule, getDeviceInfo, downloadYTVideo, createBlankFrame
+from depthai_sdk.utils import loadModule, getDeviceInfo, downloadYTVideo, createBlankFrame
 from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 
@@ -694,7 +701,18 @@ def runQt():
             self.instance = instance
             self.parent = parent
             self.conf = conf
-            self.callback_module = loadModule(conf.args.callback)
+            
+            callback_path = Path(conf.args.callback)
+            if getattr(sys, 'frozen', False) and not callback_path.is_absolute():
+                # PyInstaller onedir mode: files are relative to the executable
+                base_path = Path(sys.executable).parent
+                callback_path = base_path / callback_path
+            elif "__compiled__" in globals() and not callback_path.is_absolute():
+                # Nuitka standalone
+                base_path = Path(sys.argv[0]).parent
+                callback_path = base_path / callback_path
+                
+            self.callback_module = loadModule(callback_path)
             self.file_callbacks = {
                 callbackName: getattr(self.callback_module, callbackName)
                 for callbackName in ["shouldRun", "onNewFrame", "onShowFrame", "onNn", "onReport", "onSetup", "onTeardown", "onIter"]
