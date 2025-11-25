@@ -94,23 +94,30 @@ if not exist "%VENV_DIR%\Scripts\ffmpeg.exe" (
     set "FFMPEG_ZIP=ffmpeg.zip"
     set "FFMPEG_TEMP_DIR=ffmpeg_temp"
     
-    curl -L -o "%FFMPEG_ZIP%" "%FFMPEG_URL%"
-    if %errorlevel% neq 0 (
+    curl -L -o "!FFMPEG_ZIP!" "!FFMPEG_URL!"
+    if !errorlevel! neq 0 (
         echo Failed to download FFmpeg.
         echo Please download it manually and place ffmpeg.exe in %VENV_DIR%\Scripts\
     ) else (
         echo Extracting FFmpeg...
-        powershell -Command "Expand-Archive -Path '%FFMPEG_ZIP%' -DestinationPath '%FFMPEG_TEMP_DIR%' -Force"
+        powershell -Command "Expand-Archive -Path '!FFMPEG_ZIP!' -DestinationPath '!FFMPEG_TEMP_DIR!' -Force"
         
         echo Installing FFmpeg to virtual environment...
         :: Find ffmpeg.exe in the extracted folder (it's usually in a subfolder)
-        for /r "%FFMPEG_TEMP_DIR%" %%f in (ffmpeg.exe) do (
+        set "FFMPEG_FOUND=0"
+        for /f "delims=" %%f in ('dir /s /b "!FFMPEG_TEMP_DIR!\ffmpeg.exe" 2^>nul') do (
+            echo Found FFmpeg at: %%f
             copy "%%f" "%VENV_DIR%\Scripts\ffmpeg.exe" >nul
+            set "FFMPEG_FOUND=1"
+        )
+        
+        if "!FFMPEG_FOUND!"=="0" (
+            echo ERROR: Could not find ffmpeg.exe in the downloaded archive.
         )
         
         :: Cleanup
-        del "%FFMPEG_ZIP%"
-        rmdir /s /q "%FFMPEG_TEMP_DIR%"
+        if exist "!FFMPEG_ZIP!" del "!FFMPEG_ZIP!"
+        if exist "!FFMPEG_TEMP_DIR!" rmdir /s /q "!FFMPEG_TEMP_DIR!"
         
         if exist "%VENV_DIR%\Scripts\ffmpeg.exe" (
             echo FFmpeg installed successfully.
