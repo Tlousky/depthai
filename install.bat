@@ -85,6 +85,43 @@ if exist "requirements-optional.txt" (
     pip install -r requirements-optional.txt
 )
 
+:: --- Install FFmpeg ---
+echo.
+echo Checking for FFmpeg...
+if not exist "%VENV_DIR%\Scripts\ffmpeg.exe" (
+    echo Downloading FFmpeg...
+    set "FFMPEG_URL=https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+    set "FFMPEG_ZIP=ffmpeg.zip"
+    set "FFMPEG_TEMP_DIR=ffmpeg_temp"
+    
+    curl -L -o "%FFMPEG_ZIP%" "%FFMPEG_URL%"
+    if %errorlevel% neq 0 (
+        echo Failed to download FFmpeg.
+        echo Please download it manually and place ffmpeg.exe in %VENV_DIR%\Scripts\
+    ) else (
+        echo Extracting FFmpeg...
+        powershell -Command "Expand-Archive -Path '%FFMPEG_ZIP%' -DestinationPath '%FFMPEG_TEMP_DIR%' -Force"
+        
+        echo Installing FFmpeg to virtual environment...
+        :: Find ffmpeg.exe in the extracted folder (it's usually in a subfolder)
+        for /r "%FFMPEG_TEMP_DIR%" %%f in (ffmpeg.exe) do (
+            copy "%%f" "%VENV_DIR%\Scripts\ffmpeg.exe" >nul
+        )
+        
+        :: Cleanup
+        del "%FFMPEG_ZIP%"
+        rmdir /s /q "%FFMPEG_TEMP_DIR%"
+        
+        if exist "%VENV_DIR%\Scripts\ffmpeg.exe" (
+            echo FFmpeg installed successfully.
+        ) else (
+            echo Failed to install FFmpeg.
+        )
+    )
+) else (
+    echo FFmpeg is already installed in the virtual environment.
+)
+
 echo.
 echo ==========================================
 echo Installation Complete!
