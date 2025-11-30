@@ -844,7 +844,7 @@ def runQt():
 
         def updateArg(self, arg_name, arg_value, shouldUpdate=True):
             setattr(self.confManager.args, arg_name, arg_value)
-            if shouldUpdate:
+            if shouldUpdate and hasattr(self, 'worker'):
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
 

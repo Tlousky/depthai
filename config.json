@@ -1,5 +1,4 @@
 {
-    "user_id": "af2666f6",
     "irLaserDotProjector": 550,
     "irFloodIlluminator": 550,
     "nnEnabled": false,
@@ -7,5 +6,13 @@
     "monoResolution": "THE_1200_P",
     "lrcThreshold": 10,
     "disparityConfidenceThreshold": 240,
-    "shaves": 6
+    "shaves": 6,
+    "depthRangeFrom": 0,
+    "depthRangeTo": 3,
+    "encodeRight": true,
+    "encodeRightFps": 30,
+    "encodeLeft": true,
+    "encodeLeftFps": 30,
+    "s3_bucket": "depthai-uploads-bplinks",
+    "s3_region": "eu-north-1"
 }

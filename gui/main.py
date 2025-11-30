@@ -16,6 +16,8 @@ from PyQt5.QtWidgets import QApplication
 from depthai_sdk.previews import Previews
 from depthai_sdk.utils import resizeLetterbox, createBlankFrame
 from gui.config_handler import ConfigHandler
+from s3_uploader import S3Uploader
+import threading
 
 # If BGR format is available
 colorMode = QImage.Format_RGB888
@@ -158,6 +160,40 @@ class AppBridge(QObject):
     @pyqtSlot()
     def toggleRecording(self):
         instance.guiOnToggleRecording()
+
+    @pyqtSlot()
+    def uploadFiles(self):
+        # Get config for user UUID and upload path
+        config = ConfigHandler()
+        # Assuming user UUID is stored in config, or we generate/retrieve it. 
+        # The request says "user UUID from the config.json".
+        # Let's check how config is handled. ConfigHandler reads config.json.
+        # We need to ensure 'user_uuid' is available. 
+        # If not explicitly in config.json, we might need to fallback or it might be 'app.args.deviceId' or similar?
+        # The request specifically says "user UUID from the config.json".
+        
+        user_uuid = config.get_value("user_id")
+        if not user_uuid:
+            print("User ID not found in config.json. Cannot upload.")
+            return
+
+        upload_path = config.get_value("encodeOutput")
+        if not upload_path:
+            # Fallback to default recordings path if not set
+            upload_path = str(Path.cwd() / "recordings")
+        
+        bucket_name = config.get_value("s3_bucket")
+        if not bucket_name:
+            bucket_name = "uploads" # Default fallback
+            print("S3 bucket not found in config.json. Using default 'uploads'.")
+
+        region_name = config.get_value("s3_region")
+
+        def upload_worker():
+            uploader = S3Uploader(bucket_name, region_name)
+            uploader.scan_and_upload(upload_path, user_uuid)
+
+        threading.Thread(target=upload_worker, daemon=True).start()
 
 
 # @QmlElement

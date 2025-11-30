@@ -58,6 +58,16 @@ ListView {
             onClicked: appBridge.toggleRecording()
         }
 
+        Button {
+            id: uploadButton
+            x: 690
+            y: 5
+            height: 30
+            width: 100
+            text: "Upload"
+            onClicked: appBridge.uploadFiles()
+        }
+
         ImageWriter {
             id: imageWriter
             objectName: "writer"

@@ -16,3 +16,4 @@ ahrs==0.3.1
 depthai-pipeline-graph==0.0.5
 blobconverter>=1.4.1
 pytube>=12.1.0
+boto3
