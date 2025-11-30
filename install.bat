@@ -89,12 +89,18 @@ if exist "requirements-optional.txt" (
 echo.
 echo Checking for FFmpeg...
 if not exist "%VENV_DIR%\Scripts\ffmpeg.exe" (
-    echo Downloading FFmpeg...
     set "FFMPEG_URL=https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
     set "FFMPEG_ZIP=ffmpeg.zip"
     set "FFMPEG_TEMP_DIR=ffmpeg_temp"
+    set "FFMPEG_LOCAL_ZIP=resources\ffmpeg-release-essentials.zip"
     
-    curl -L -o "!FFMPEG_ZIP!" "!FFMPEG_URL!"
+    if exist "!FFMPEG_LOCAL_ZIP!" (
+        echo Found local FFmpeg zip at !FFMPEG_LOCAL_ZIP!
+        copy "!FFMPEG_LOCAL_ZIP!" "!FFMPEG_ZIP!" >nul
+    ) else (
+        echo Downloading FFmpeg...
+        curl -L -o "!FFMPEG_ZIP!" "!FFMPEG_URL!"
+    )
     if !errorlevel! neq 0 (
         echo Failed to download FFmpeg.
         echo Please download it manually and place ffmpeg.exe in %VENV_DIR%\Scripts\
