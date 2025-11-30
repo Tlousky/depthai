@@ -129,6 +129,12 @@ if not exist "%VENV_DIR%\Scripts\ffmpeg.exe" (
     echo FFmpeg is already installed in the virtual environment.
 )
 
+:: --- Generate User ID ---
+echo.
+echo Generating User ID...
+call "%VENV_DIR%\Scripts\activate.bat"
+python generate_user_id.py
+
 echo.
 echo ==========================================
 echo Installation Complete!
