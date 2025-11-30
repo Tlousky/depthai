@@ -53,6 +53,7 @@ ListView {
                 width: 282
                 height: 33
                 model: modelChoices
+                currentIndex: modelChoices.indexOf(cnnModel)
                 onActivated: function(index) {
                     aiBridge.setCnnModel(model[index])
                 }
@@ -80,6 +81,7 @@ ListView {
                 width: 141
                 height: 33
                 model: modelSourceChoices
+                currentIndex: modelSourceChoices.indexOf(modelSource)
                 onActivated: function(index) {
                     aiBridge.setModelSource(model[index])
                 }
@@ -106,7 +108,7 @@ ListView {
                 y: 95
                 width: 261
                 height: 33
-                value: 6
+                value: shaves
                 stepSize: 1
                 onValueChanged: {
                     aiBridge.setShaves(value)
@@ -150,7 +152,7 @@ ListView {
                 y: 137
                 width: 37
                 height: 23
-                checked: true
+                checked: fullFov
                 onClicked: aiBridge.setFullFov(checkBoxFullFov.checked)
             }
         }
@@ -197,6 +199,7 @@ ListView {
                 width: 170
                 height: 33
                 model: ovVersions
+                currentIndex: ovVersions.indexOf(ovVersion)
                 onActivated: function(index) {
                     aiBridge.setOvVersion(model[index])
                 }
@@ -224,6 +227,7 @@ ListView {
                 width: 141
                 height: 33
                 model: countLabels
+                currentIndex: countLabels.indexOf(countLabel)
                 onActivated: function(index) {
                     aiBridge.setCountLabel(model[index])
                 }
@@ -239,6 +243,7 @@ ListView {
                 text: qsTr("<font color=\"white\">Spatial Bounding Boxes</font>")
                 font.family: "Courier"
                 autoExclusive: false
+                checked: sbb
                 transformOrigin: Item.Center
                 onToggled: {
                     aiBridge.setSbb(switch3.checked)
@@ -267,7 +272,7 @@ ListView {
                 y: 383
                 width: 96
                 height: 33
-                value: 0.3
+                value: sbbFactor
                 stepSize: 0.1
                 to: 1
                 from: 0.1
@@ -298,7 +303,7 @@ ListView {
             width: 167
             height: 38
             text: qsTr("<font color=\"white\">Enabled</font>")
-            checked: true
+            checked: nnEnabled
             autoExclusive: false
             font.family: "Courier"
             transformOrigin: Item.Center

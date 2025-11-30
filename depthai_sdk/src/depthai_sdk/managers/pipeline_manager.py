@@ -606,13 +606,13 @@ class PipelineManager:
         """
         if any([dct, sigma, median, lrcThreshold]):
             if dct is not None:
-                self._depthConfig.costMatching.confidenceThreshold = dct
+                self._depthConfig.setConfidenceThreshold(dct)
             if sigma is not None:
-                self._depthConfig.postProcessing.bilateralSigmaValue = sigma
+                self._depthConfig.setBilateralFilterSigma(sigma)
             if median is not None:
-                self._depthConfig.postProcessing.median = median
+                self._depthConfig.setMedianFilter(median)
             if lrcThreshold is not None:
-                self._depthConfig.algorithmControl.leftRightCheckThreshold = lrcThreshold
+                self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
             self._depthConfigInputQueue.send(self._depthConfig)
 
     def addNn(self, nn, xoutNnInput=False, xoutSbb=False):

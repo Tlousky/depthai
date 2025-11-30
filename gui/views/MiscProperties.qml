@@ -43,7 +43,7 @@ ListView {
             width: 130
             height: 27
             text: qsTr("<font color=\"white\">Color</font>")
-            checked: true
+            checked: encodeColor
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleColorEncoding(encColorSwitch.checked, encColorFps.text)
@@ -56,6 +56,7 @@ ListView {
             y: 44
             width: 60
             height: 27
+            text: encodeColorFps.toString()
             bottomPadding: 7
             validator: IntValidator {}
             placeholderText: qsTr("FPS")
@@ -74,6 +75,7 @@ ListView {
             height: 27
             text: qsTr("<font color=\"white\">Right</font>")
             bottomPadding: 5
+            checked: encodeRight
             onToggled: {
                 appBridge.toggleRightEncoding(encRightSwitch.checked, encRightFps.text)
             }
@@ -86,6 +88,7 @@ ListView {
             y: 44
             width: 60
             height: 27
+            text: encodeRightFps.toString()
             bottomPadding: 7
             validator: IntValidator {}
             placeholderText: qsTr("FPS")
@@ -104,6 +107,7 @@ ListView {
             height: 27
             text: qsTr("<font color=\"white\">Left</font>")
             bottomPadding: 5
+            checked: encodeLeft
             onToggled: {
                 appBridge.toggleLeftEncoding(encLeftSwitch.checked, encLeftFps.text)
             }
@@ -116,6 +120,7 @@ ListView {
             y: 77
             width: 60
             height: 27
+            text: encodeLeftFps.toString()
             bottomPadding: 7
             validator: IntValidator {}
             placeholderText: qsTr("FPS")
@@ -133,7 +138,7 @@ ListView {
             width: 130
             height: 27
             text: qsTr("<font color=\"white\">Depth</font>")
-            checked: true
+            checked: encodeDepth
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleDepthEncoding(encDepthSwitch.checked, encDepthFps.text)
@@ -147,6 +152,7 @@ ListView {
             y: 77
             width: 60
             height: 27
+            text: encodeDepthFps.toString()
             bottomPadding: 7
             validator: IntValidator {}
             placeholderText: qsTr("FPS")
@@ -165,6 +171,7 @@ ListView {
             height: 27
             text: qsTr("<font color=\"white\">Point Cloud</font>")
             bottomPadding: 5
+            checked: encodePointCloud
             onToggled: {
                 appBridge.togglePointCloud(encPointCloudSwitch.checked)
             }
@@ -180,6 +187,7 @@ ListView {
             height: 27
             text: qsTr("<font color=\"white\">IR</font>")
             bottomPadding: 5
+            checked: encodeIr
             onToggled: {
                 appBridge.toggleIrEncoding(encIrSwitch.checked, encIrFps.text)
             }
@@ -192,6 +200,7 @@ ListView {
             y: 110
             width: 60
             height: 27
+            text: encodeIrFps.toString()
             bottomPadding: 7
             validator: IntValidator {}
             placeholderText: qsTr("FPS")
@@ -222,6 +231,7 @@ ListView {
             height: 27
             text: qsTr("<font color=\"white\">Temperature</font>")
             bottomPadding: 5
+            checked: reportTemp
             onToggled: {
                 appBridge.selectReportingOptions(tempSwitch.checked, cpuSwitch.checked, memSwitch.checked)
             }
@@ -235,6 +245,7 @@ ListView {
             height: 27
             text: qsTr("<font color=\"white\">CPU</font>")
             bottomPadding: 5
+            checked: reportCpu
             onToggled: {
                 appBridge.selectReportingOptions(tempSwitch.checked, cpuSwitch.checked, memSwitch.checked)
             }
@@ -248,6 +259,7 @@ ListView {
             height: 27
             text: qsTr("<font color=\"white\">Memory</font>")
             bottomPadding: 5
+            checked: reportMem
             onToggled: {
                 appBridge.selectReportingOptions(tempSwitch.checked, cpuSwitch.checked, memSwitch.checked)
             }
@@ -260,6 +272,7 @@ ListView {
             width: 170
             height: 27
             bottomPadding: 7
+            text: reportPath
             placeholderText: qsTr("/path/to/report.csv")
             onEditingFinished: {
                 appBridge.selectReportingPath(text)
@@ -303,6 +316,7 @@ ListView {
             width: 240
             height: 27
             bottomPadding: 7
+            text: encodeOutput
             placeholderText: qsTr("/path/to/output/directory/")
             onEditingFinished: {
                 appBridge.selectEncodingPath(text)

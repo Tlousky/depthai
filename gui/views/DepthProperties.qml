@@ -26,6 +26,7 @@ ListView {
             width: 195
             height: 33
             model: medianChoices
+            currentIndex: medianChoices.indexOf(medianFilter)
             onActivated: function(index) {
                 depthBridge.setMedianFilter(model[index])
             }
@@ -41,7 +42,7 @@ ListView {
             stepSize: 1
             from: 0
             to: 255
-            value: 240
+            value: disparityConfidenceThreshold
             onValueChanged: {
                 depthBridge.setDisparityConfidenceThreshold(value)
             }
@@ -84,7 +85,7 @@ ListView {
             text: qsTr("<font color=\"white\">Enabled</font>")
             autoExclusive: false
             font.family: "Courier"
-            checked: true
+            checked: depthEnabled
             transformOrigin: Item.Center
             onToggled: {
                 appBridge.toggleDepth(switch5.checked)
@@ -97,6 +98,7 @@ ListView {
             y: 233
             text: qsTr("<font color=\"white\">Extended Disparity</font>")
             autoExclusive: false
+            checked: extendedDisparity
             font.family: "Courier"
             transformOrigin: Item.Center
             onToggled: {
@@ -110,6 +112,7 @@ ListView {
             y: 141
             text: qsTr("<font color=\"white\">Subpixel</font>")
             autoExclusive: false
+            checked: subpixel
             transformOrigin: Item.Center
             font.family: "Courier"
             onToggled: {
@@ -140,7 +143,7 @@ ListView {
             height: 25
             stepSize: 1
             snapMode: RangeSlider.NoSnap
-            value: 0
+            value: bilateralSigma
             to: 255
             onValueChanged: {
                 depthBridge.setBilateralSigma(value)
@@ -237,7 +240,7 @@ ListView {
             height: 27
             stepSize: 1
             to: 10
-            value: 10
+            value: lrcThreshold
             from: 0
             onValueChanged: {
                 depthBridge.setLrcThreshold(value)
@@ -264,6 +267,7 @@ ListView {
             height: 38
             text: qsTr("<font color=\"white\">Use Disparity</font>")
             autoExclusive: false
+            checked: disparityEnabled
             font.family: "Courier"
             transformOrigin: Item.Center
             onToggled: {
@@ -291,7 +295,7 @@ ListView {
             y: 197
             width: 60
             height: 25
-            text: "0"
+            text: depthRangeFrom.toString()
             placeholderText: "Min depth"
             bottomPadding: 5
             validator: DoubleValidator {
@@ -308,7 +312,7 @@ ListView {
             y: 197
             width: 60
             height: 25
-            text: "10"
+            text: depthRangeTo.toString()
             placeholderText: "Max depth"
             bottomPadding: 5
             validator: DoubleValidator {
@@ -357,7 +361,7 @@ ListView {
             height: 27
             stepSize: 1
             to: 1200
-            value: irDotBrightness
+            value: irLaserDotProjector
             from: 0
             onValueChanged: {
                 depthBridge.setIrLaserDotProjector(value)
@@ -400,7 +404,7 @@ ListView {
             height: 27
             stepSize: 1
             to: 1500
-            value: irFloodBrightness
+            value: irFloodIlluminator
             from: 0
             onValueChanged: {
                 depthBridge.setIrFloodIlluminator(value)

@@ -90,26 +90,37 @@ class AppBridge(QObject):
 
     @pyqtSlot(bool, bool, bool)
     def selectReportingOptions(self, temp, cpu, memory):
+        ConfigHandler().set_value("reportTemp", temp)
+        ConfigHandler().set_value("reportCpu", cpu)
+        ConfigHandler().set_value("reportMem", memory)
         instance.guiOnSelectReportingOptions(temp, cpu, memory)
 
     @pyqtSlot(str)
     def selectReportingPath(self, value):
+        ConfigHandler().set_value("reportPath", value)
         instance.guiOnSelectReportingPath(value)
 
     @pyqtSlot(str)
     def selectEncodingPath(self, value):
+        ConfigHandler().set_value("encodeOutput", value)
         instance.guiOnSelectEncodingPath(value)
 
     @pyqtSlot(bool, int)
     def toggleColorEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeColor", enabled)
+        ConfigHandler().set_value("encodeColorFps", fps)
         instance.guiOnToggleColorEncoding(enabled, fps)
 
     @pyqtSlot(bool, int)
     def toggleLeftEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeLeft", enabled)
+        ConfigHandler().set_value("encodeLeftFps", fps)
         instance.guiOnToggleLeftEncoding(enabled, fps)
 
     @pyqtSlot(bool, int)
     def toggleRightEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeRight", enabled)
+        ConfigHandler().set_value("encodeRightFps", fps)
         instance.guiOnToggleRightEncoding(enabled, fps)
 
     @pyqtSlot(bool)
@@ -129,14 +140,19 @@ class AppBridge(QObject):
 
     @pyqtSlot(bool, int)
     def toggleDepthEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeDepth", enabled)
+        ConfigHandler().set_value("encodeDepthFps", fps)
         instance.guiOnToggleDepthEncoding(enabled, fps)
 
     @pyqtSlot(bool)
     def togglePointCloud(self, enabled):
+        ConfigHandler().set_value("encodePointCloud", enabled)
         instance.guiOnTogglePointCloud(enabled)
 
     @pyqtSlot(bool, int)
     def toggleIrEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeIr", enabled)
+        ConfigHandler().set_value("encodeIrFps", fps)
         instance.guiOnToggleIrEncoding(enabled, fps)
 
     @pyqtSlot()
@@ -438,184 +454,441 @@ class DemoQtGui:
         self.setData(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
         versionChoices = sorted(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()), reverse=True)
         self.setData(["ovVersions", versionChoices])
+        
+        # Initialize QML models to prevent undefined errors
+        self.setData(["modelChoices", []])
+        self.setData(["countLabels", []])
+        self.setData(["deviceChoices", []])
+
         self.createProgressFrame()
         self.createProgressFrame()
         
         # Load configuration
         config = ConfigHandler()
         
+        # Helper to safely update args
+        def update_arg(name, value):
+            if hasattr(self, 'confManager'):
+                setattr(self.confManager.args, name, value)
+
         # Apply loaded configuration
         if config.get_value("sync") is not None:
-            self.setData(["sync", config.get_value("sync")])
-            self.guiOnToggleSync(config.get_value("sync"))
+            val = config.get_value("sync")
+            self.setData(["sync", val])
+            update_arg("sync", val)
             
         if config.get_value("rgbDepthAlignment") is not None:
-            self.setData(["rgbDepthAlignment", config.get_value("rgbDepthAlignment")])
-            self.guiOnToggleRgbDepthAlignment(not config.get_value("rgbDepthAlignment"))
+            val = config.get_value("rgbDepthAlignment")
+            self.setData(["rgbDepthAlignment", val])
+            update_arg("noRgbDepthAlign", not val)
             
         if config.get_value("depthEnabled") is not None:
-            self.setData(["depthEnabled", config.get_value("depthEnabled")])
-            self.guiOnToggleDepth(config.get_value("depthEnabled"))
+            val = config.get_value("depthEnabled")
+            self.setData(["depthEnabled", val])
+            # depthEnabled is derived from args.show containing "depth"
+            # We can't easily set it here without manipulating args.show
+            pass 
             
         if config.get_value("nnEnabled") is not None:
-            self.setData(["nnEnabled", config.get_value("nnEnabled")])
-            self.guiOnToggleNN(config.get_value("nnEnabled"))
+            val = config.get_value("nnEnabled")
+            self.setData(["nnEnabled", val])
+            # nnEnabled is complex to set directly on args
+            pass
             
         if config.get_value("disparityEnabled") is not None:
-            self.setData(["disparityEnabled", config.get_value("disparityEnabled")])
-            self.guiOnToggleDisparity(config.get_value("disparityEnabled"))
+            val = config.get_value("disparityEnabled")
+            self.setData(["disparityEnabled", val])
+            pass
             
         if config.get_value("cnnModel") is not None:
-            self.setData(["cnnModel", config.get_value("cnnModel")])
-            self.guiOnAiSetupUpdate(cnn=config.get_value("cnnModel"))
+            val = config.get_value("cnnModel")
+            self.setData(["cnnModel", val])
+            update_arg("cnnModel", val)
             
         if config.get_value("shaves") is not None:
-            self.setData(["shaves", config.get_value("shaves")])
-            self.guiOnAiSetupUpdate(shave=config.get_value("shaves"))
+            val = config.get_value("shaves")
+            self.setData(["shaves", val])
+            update_arg("shaves", val)
             
         if config.get_value("modelSource") is not None:
-            self.setData(["modelSource", config.get_value("modelSource")])
-            self.guiOnAiSetupUpdate(source=config.get_value("modelSource"))
+            val = config.get_value("modelSource")
+            self.setData(["modelSource", val])
+            update_arg("camera", val) # 'camera' arg controls model source
             
         if config.get_value("fullFov") is not None:
-            self.setData(["fullFov", config.get_value("fullFov")])
-            self.guiOnAiSetupUpdate(fullFov=config.get_value("fullFov"))
+            val = config.get_value("fullFov")
+            self.setData(["fullFov", val])
+            update_arg("disableFullFovNn", not val)
             
         if config.get_value("sbb") is not None:
-            self.setData(["sbb", config.get_value("sbb")])
-            self.guiOnAiSetupUpdate(sbb=config.get_value("sbb"))
+            val = config.get_value("sbb")
+            self.setData(["sbb", val])
+            update_arg("spatialBoundingBox", val)
             
         if config.get_value("sbbFactor") is not None:
-            self.setData(["sbbFactor", config.get_value("sbbFactor")])
-            self.guiOnAiSetupUpdate(sbbFactor=config.get_value("sbbFactor"))
+            val = config.get_value("sbbFactor")
+            self.setData(["sbbFactor", val])
+            update_arg("sbbScaleFactor", val)
             
         if config.get_value("ovVersion") is not None:
-            self.setData(["ovVersion", config.get_value("ovVersion")])
-            self.guiOnAiSetupUpdate(ov=config.get_value("ovVersion").replace("VERSION_", ""))
+            val = config.get_value("ovVersion")
+            self.setData(["ovVersion", val])
+            update_arg("openvinoVersion", val.replace("VERSION_", ""))
             
         if config.get_value("countLabel") is not None:
-            self.setData(["countLabel", config.get_value("countLabel")])
-            self.guiOnAiSetupUpdate(countLabel=config.get_value("countLabel"))
+            val = config.get_value("countLabel")
+            self.setData(["countLabel", val])
+            update_arg("countLabel", val)
             
         if config.get_value("subpixel") is not None:
-            self.setData(["subpixel", config.get_value("subpixel")])
-            self.guiOnDepthSetupUpdate(subpixel=config.get_value("subpixel"))
+            val = config.get_value("subpixel")
+            self.setData(["subpixel", val])
+            update_arg("subpixel", val)
             
         if config.get_value("extendedDisparity") is not None:
-            self.setData(["extendedDisparity", config.get_value("extendedDisparity")])
-            self.guiOnDepthSetupUpdate(extended=config.get_value("extendedDisparity"))
+            val = config.get_value("extendedDisparity")
+            self.setData(["extendedDisparity", val])
+            update_arg("extendedDisparity", val)
             
         if config.get_value("lrc") is not None:
-            self.setData(["lrc", config.get_value("lrc")])
-            self.guiOnDepthSetupUpdate(lrc=config.get_value("lrc"))
+            val = config.get_value("lrc")
+            self.setData(["lrc", val])
+            update_arg("stereoLrCheck", val)
             
         if config.get_value("disparityConfidenceThreshold") is not None:
-            self.setData(["disparityConfidenceThreshold", config.get_value("disparityConfidenceThreshold")])
-            self.guiOnDepthConfigUpdate(dct=config.get_value("disparityConfidenceThreshold"))
+            val = config.get_value("disparityConfidenceThreshold")
+            self.setData(["disparityConfidenceThreshold", val])
+            update_arg("disparityConfidenceThreshold", val)
             
         if config.get_value("lrcThreshold") is not None:
-            self.setData(["lrcThreshold", config.get_value("lrcThreshold")])
-            self.guiOnDepthConfigUpdate(lrcThreshold=config.get_value("lrcThreshold"))
+            val = config.get_value("lrcThreshold")
+            self.setData(["lrcThreshold", val])
+            update_arg("lrcThreshold", val)
             
         if config.get_value("bilateralSigma") is not None:
-            self.setData(["bilateralSigma", config.get_value("bilateralSigma")])
-            self.guiOnDepthConfigUpdate(sigma=config.get_value("bilateralSigma"))
+            val = config.get_value("bilateralSigma")
+            self.setData(["bilateralSigma", val])
+            update_arg("sigma", val)
             
         if config.get_value("depthRangeFrom") is not None and config.get_value("depthRangeTo") is not None:
             self.setData(["depthRangeFrom", config.get_value("depthRangeFrom")])
             self.setData(["depthRangeTo", config.get_value("depthRangeTo")])
-            self.guiOnDepthSetupUpdate(depthFrom=int(config.get_value("depthRangeFrom") * 1000), depthTo=int(config.get_value("depthRangeTo") * 1000))
+            update_arg("minDepth", int(config.get_value("depthRangeFrom") * 1000))
+            update_arg("maxDepth", int(config.get_value("depthRangeTo") * 1000))
             
         if config.get_value("medianFilter") is not None:
-            self.setData(["medianFilter", config.get_value("medianFilter")])
-            value = getattr(dai.MedianFilter, config.get_value("medianFilter"))
-            self.guiOnDepthConfigUpdate(median=value)
+            val = config.get_value("medianFilter")
+            self.setData(["medianFilter", val])
+            # Map string to size for args
+            size = 0
+            if val == "KERNEL_3x3": size = 3
+            elif val == "KERNEL_5x5": size = 5
+            elif val == "KERNEL_7x7": size = 7
+            update_arg("stereoMedianSize", size)
             
         if config.get_value("irLaserDotProjector") is not None:
-            self.setData(["irLaserDotProjector", config.get_value("irLaserDotProjector")])
-            self.guiOnDepthConfigUpdate(irLaser=config.get_value("irLaserDotProjector"))
+            val = config.get_value("irLaserDotProjector")
+            self.setData(["irLaserDotProjector", val])
+            update_arg("irDotBrightness", val)
             
         if config.get_value("irFloodIlluminator") is not None:
-            self.setData(["irFloodIlluminator", config.get_value("irFloodIlluminator")])
-            self.guiOnDepthConfigUpdate(irFlood=config.get_value("irFloodIlluminator"))
+            val = config.get_value("irFloodIlluminator")
+            self.setData(["irFloodIlluminator", val])
+            update_arg("irFloodBrightness", val)
             
         if config.get_value("colorIso") is not None and config.get_value("colorExposure") is not None:
             self.setData(["colorIso", config.get_value("colorIso")])
             self.setData(["colorExposure", config.get_value("colorExposure")])
-            self.guiOnCameraConfigUpdate("color", sensitivity=config.get_value("colorIso"), exposure=config.get_value("colorExposure"))
+            # Camera controls are complex lists in args, skipping complex update for now to avoid errors
+            # update_arg("cameraSensitivity", ...) 
             
         if config.get_value("colorContrast") is not None:
             self.setData(["colorContrast", config.get_value("colorContrast")])
-            self.guiOnCameraConfigUpdate("color", contrast=config.get_value("colorContrast"))
             
         if config.get_value("colorBrightness") is not None:
             self.setData(["colorBrightness", config.get_value("colorBrightness")])
-            self.guiOnCameraConfigUpdate("color", brightness=config.get_value("colorBrightness"))
             
         if config.get_value("colorSaturation") is not None:
             self.setData(["colorSaturation", config.get_value("colorSaturation")])
-            self.guiOnCameraConfigUpdate("color", saturation=config.get_value("colorSaturation"))
             
         if config.get_value("colorSharpness") is not None:
             self.setData(["colorSharpness", config.get_value("colorSharpness")])
-            self.guiOnCameraConfigUpdate("color", sharpness=config.get_value("colorSharpness"))
             
         if config.get_value("colorFps") is not None:
-            self.setData(["colorFps", config.get_value("colorFps")])
-            self.guiOnCameraSetupUpdate("color", fps=config.get_value("colorFps"))
+            val = config.get_value("colorFps")
+            self.setData(["colorFps", val])
+            update_arg("rgbFps", val)
             
         if config.get_value("colorResolution") is not None:
-            self.setData(["colorResolution", config.get_value("colorResolution")])
-            state = config.get_value("colorResolution")
-            if state == "THE_1080_P":
-                self.guiOnCameraSetupUpdate("color", resolution=1080)
-            elif state == "THE_4_K":
-                self.guiOnCameraSetupUpdate("color", resolution=2160)
-            elif state == "THE_12_MP":
-                self.guiOnCameraSetupUpdate("color", resolution=3040)
+            val = config.get_value("colorResolution")
+            self.setData(["colorResolution", val])
+            update_arg("rgbResolution", val)
                 
         if config.get_value("monoIso") is not None and config.get_value("monoExposure") is not None:
             self.setData(["monoIso", config.get_value("monoIso")])
             self.setData(["monoExposure", config.get_value("monoExposure")])
-            self.guiOnCameraConfigUpdate("left", sensitivity=config.get_value("monoIso"), exposure=config.get_value("monoExposure"))
-            self.guiOnCameraConfigUpdate("right", sensitivity=config.get_value("monoIso"), exposure=config.get_value("monoExposure"))
+            
+        w, h = int(self.writer.width()), int(self.writer.height())
+        setupFrame = createBlankFrame(w, h)
+        cv2.putText(setupFrame, text, (200, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
+        cv2.putText(setupFrame, text, (200, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        if colorMode == QImage.Format_RGB888:
+                setupFrame = cv2.cvtColor(setupFrame, cv2.COLOR_RGB2BGR)
+        img = QImage(setupFrame.data, w, h, setupFrame.shape[2] * w, colorMode)
+        self.writer.update_frame(img)
+
+    def startGui(self):
+        self.writer = self.window.findChild(QObject, "writer")
+        self.showSetupFrame("Starting demo...")
+        medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
+        self.setData(["medianChoices", medianChoices])
+        colorChoices = list(filter(lambda name: name[0].isupper(), vars(dai.ColorCameraProperties.SensorResolution).keys()))
+        self.setData(["colorResolutionChoices", colorChoices])
+        monoChoices = list(filter(lambda name: name[0].isupper(), vars(dai.MonoCameraProperties.SensorResolution).keys()))
+        self.setData(["monoResolutionChoices", monoChoices])
+        self.setData(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
+        versionChoices = sorted(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()), reverse=True)
+        self.setData(["ovVersions", versionChoices])
+        
+        # Initialize QML models to prevent undefined errors
+        self.setData(["modelChoices", []])
+        self.setData(["countLabels", []])
+        self.setData(["deviceChoices", []])
+
+        self.createProgressFrame()
+        self.createProgressFrame()
+        
+        # Load configuration
+        config = ConfigHandler()
+        
+        # Helper to safely update args
+        def update_arg(name, value):
+            if hasattr(self, 'confManager'):
+                setattr(self.confManager.args, name, value)
+
+        # Apply loaded configuration
+        if config.get_value("sync") is not None:
+            val = config.get_value("sync")
+            self.setData(["sync", val])
+            update_arg("sync", val)
+            
+        if config.get_value("rgbDepthAlignment") is not None:
+            val = config.get_value("rgbDepthAlignment")
+            self.setData(["rgbDepthAlignment", val])
+            update_arg("noRgbDepthAlign", not val)
+            
+        if config.get_value("depthEnabled") is not None:
+            val = config.get_value("depthEnabled")
+            self.setData(["depthEnabled", val])
+            # depthEnabled is derived from args.show containing "depth"
+            # We can't easily set it here without manipulating args.show
+            pass 
+            
+        if config.get_value("nnEnabled") is not None:
+            val = config.get_value("nnEnabled")
+            self.setData(["nnEnabled", val])
+            # nnEnabled is complex to set directly on args
+            pass
+            
+        if config.get_value("disparityEnabled") is not None:
+            val = config.get_value("disparityEnabled")
+            self.setData(["disparityEnabled", val])
+            pass
+            
+        if config.get_value("cnnModel") is not None:
+            val = config.get_value("cnnModel")
+            self.setData(["cnnModel", val])
+            update_arg("cnnModel", val)
+            
+        if config.get_value("shaves") is not None:
+            val = config.get_value("shaves")
+            self.setData(["shaves", val])
+            update_arg("shaves", val)
+            
+        if config.get_value("modelSource") is not None:
+            val = config.get_value("modelSource")
+            self.setData(["modelSource", val])
+            update_arg("camera", val) # 'camera' arg controls model source
+            
+        if config.get_value("fullFov") is not None:
+            val = config.get_value("fullFov")
+            self.setData(["fullFov", val])
+            update_arg("disableFullFovNn", not val)
+            
+        if config.get_value("sbb") is not None:
+            val = config.get_value("sbb")
+            self.setData(["sbb", val])
+            update_arg("spatialBoundingBox", val)
+            
+        if config.get_value("sbbFactor") is not None:
+            val = config.get_value("sbbFactor")
+            self.setData(["sbbFactor", val])
+            update_arg("sbbScaleFactor", val)
+            
+        if config.get_value("ovVersion") is not None:
+            val = config.get_value("ovVersion")
+            self.setData(["ovVersion", val])
+            update_arg("openvinoVersion", val.replace("VERSION_", ""))
+            
+        if config.get_value("countLabel") is not None:
+            val = config.get_value("countLabel")
+            self.setData(["countLabel", val])
+            update_arg("countLabel", val)
+            
+        if config.get_value("subpixel") is not None:
+            val = config.get_value("subpixel")
+            self.setData(["subpixel", val])
+            update_arg("subpixel", val)
+            
+        if config.get_value("extendedDisparity") is not None:
+            val = config.get_value("extendedDisparity")
+            self.setData(["extendedDisparity", val])
+            update_arg("extendedDisparity", val)
+            
+        if config.get_value("lrc") is not None:
+            val = config.get_value("lrc")
+            self.setData(["lrc", val])
+            update_arg("stereoLrCheck", val)
+            
+        if config.get_value("disparityConfidenceThreshold") is not None:
+            val = config.get_value("disparityConfidenceThreshold")
+            self.setData(["disparityConfidenceThreshold", val])
+            update_arg("disparityConfidenceThreshold", val)
+            
+        if config.get_value("lrcThreshold") is not None:
+            val = config.get_value("lrcThreshold")
+            self.setData(["lrcThreshold", val])
+            update_arg("lrcThreshold", val)
+            
+        if config.get_value("bilateralSigma") is not None:
+            val = config.get_value("bilateralSigma")
+            self.setData(["bilateralSigma", val])
+            update_arg("sigma", val)
+            
+        if config.get_value("depthRangeFrom") is not None and config.get_value("depthRangeTo") is not None:
+            self.setData(["depthRangeFrom", config.get_value("depthRangeFrom")])
+            self.setData(["depthRangeTo", config.get_value("depthRangeTo")])
+            update_arg("minDepth", int(config.get_value("depthRangeFrom") * 1000))
+            update_arg("maxDepth", int(config.get_value("depthRangeTo") * 1000))
+            
+        if config.get_value("medianFilter") is not None:
+            val = config.get_value("medianFilter")
+            self.setData(["medianFilter", val])
+            # Map string to size for args
+            size = 0
+            if val == "KERNEL_3x3": size = 3
+            elif val == "KERNEL_5x5": size = 5
+            elif val == "KERNEL_7x7": size = 7
+            update_arg("stereoMedianSize", size)
+            
+        if config.get_value("irLaserDotProjector") is not None:
+            val = config.get_value("irLaserDotProjector")
+            self.setData(["irLaserDotProjector", val])
+            update_arg("irDotBrightness", val)
+            
+        if config.get_value("irFloodIlluminator") is not None:
+            val = config.get_value("irFloodIlluminator")
+            self.setData(["irFloodIlluminator", val])
+            update_arg("irFloodBrightness", val)
+            
+        if config.get_value("colorIso") is not None and config.get_value("colorExposure") is not None:
+            self.setData(["colorIso", config.get_value("colorIso")])
+            self.setData(["colorExposure", config.get_value("colorExposure")])
+            # Camera controls are complex lists in args, skipping complex update for now to avoid errors
+            # update_arg("cameraSensitivity", ...) 
+            
+        if config.get_value("colorContrast") is not None:
+            self.setData(["colorContrast", config.get_value("colorContrast")])
+            
+        if config.get_value("colorBrightness") is not None:
+            self.setData(["colorBrightness", config.get_value("colorBrightness")])
+            
+        if config.get_value("colorSaturation") is not None:
+            self.setData(["colorSaturation", config.get_value("colorSaturation")])
+            
+        if config.get_value("colorSharpness") is not None:
+            self.setData(["colorSharpness", config.get_value("colorSharpness")])
+            
+        if config.get_value("colorFps") is not None:
+            val = config.get_value("colorFps")
+            self.setData(["colorFps", val])
+            update_arg("rgbFps", val)
+            
+        if config.get_value("colorResolution") is not None:
+            val = config.get_value("colorResolution")
+            self.setData(["colorResolution", val])
+            update_arg("rgbResolution", val)
+                
+        if config.get_value("monoIso") is not None and config.get_value("monoExposure") is not None:
+            self.setData(["monoIso", config.get_value("monoIso")])
+            self.setData(["monoExposure", config.get_value("monoExposure")])
             
         if config.get_value("monoContrast") is not None:
             self.setData(["monoContrast", config.get_value("monoContrast")])
-            self.guiOnCameraConfigUpdate("left", contrast=config.get_value("monoContrast"))
-            self.guiOnCameraConfigUpdate("right", contrast=config.get_value("monoContrast"))
             
         if config.get_value("monoBrightness") is not None:
             self.setData(["monoBrightness", config.get_value("monoBrightness")])
-            self.guiOnCameraConfigUpdate("left", brightness=config.get_value("monoBrightness"))
-            self.guiOnCameraConfigUpdate("right", brightness=config.get_value("monoBrightness"))
             
         if config.get_value("monoSaturation") is not None:
             self.setData(["monoSaturation", config.get_value("monoSaturation")])
-            self.guiOnCameraConfigUpdate("left", saturation=config.get_value("monoSaturation"))
-            self.guiOnCameraConfigUpdate("right", saturation=config.get_value("monoSaturation"))
-            
-        if config.get_value("monoSharpness") is not None:
-            self.setData(["monoSharpness", config.get_value("monoSharpness")])
-            self.guiOnCameraConfigUpdate("left", sharpness=config.get_value("monoSharpness"))
-            self.guiOnCameraConfigUpdate("right", sharpness=config.get_value("monoSharpness"))
-            
-        if config.get_value("monoFps") is not None:
-            self.setData(["monoFps", config.get_value("monoFps")])
-            self.guiOnCameraSetupUpdate("left", fps=config.get_value("monoFps"))
-            self.guiOnCameraSetupUpdate("right", fps=config.get_value("monoFps"))
-            
-        if config.get_value("monoResolution") is not None:
-            self.setData(["monoResolution", config.get_value("monoResolution")])
-            state = config.get_value("monoResolution")
-            if state == "THE_720_P":
-                self.guiOnCameraSetupUpdate("left", resolution=720)
-                self.guiOnCameraSetupUpdate("right", resolution=720)
-            elif state == "THE_800_P":
-                self.guiOnCameraSetupUpdate("left", resolution=800)
-                self.guiOnCameraSetupUpdate("right", resolution=800)
-            elif state == "THE_400_P":
-                self.guiOnCameraSetupUpdate("left", resolution=400)
-                self.guiOnCameraSetupUpdate("right", resolution=400)
+          # Misc Properties
+        if config.get_value("reportPath") is not None:
+            self.setData(["reportPath", config.get_value("reportPath")])
+            update_arg("reportFile", config.get_value("reportPath"))
+
+        if config.get_value("encodeOutput") is not None:
+            self.setData(["encodeOutput", config.get_value("encodeOutput")])
+            # encodeOutput is not directly an arg, it's used when encoding is enabled
+            pass
+
+        if config.get_value("encodeColor") is not None and config.get_value("encodeColorFps") is not None:
+            self.setData(["encodeColor", config.get_value("encodeColor")])
+            self.setData(["encodeColorFps", config.get_value("encodeColorFps")])
+            if config.get_value("encodeColor"):
+                if hasattr(self, 'confManager'):
+                    self.confManager.args.encode["color"] = config.get_value("encodeColorFps")
+
+        if config.get_value("encodeLeft") is not None and config.get_value("encodeLeftFps") is not None:
+            self.setData(["encodeLeft", config.get_value("encodeLeft")])
+            self.setData(["encodeLeftFps", config.get_value("encodeLeftFps")])
+            if config.get_value("encodeLeft"):
+                if hasattr(self, 'confManager'):
+                    self.confManager.args.encode["left"] = config.get_value("encodeLeftFps")
+
+        if config.get_value("encodeRight") is not None and config.get_value("encodeRightFps") is not None:
+            self.setData(["encodeRight", config.get_value("encodeRight")])
+            self.setData(["encodeRightFps", config.get_value("encodeRightFps")])
+            if config.get_value("encodeRight"):
+                if hasattr(self, 'confManager'):
+                    self.confManager.args.encode["right"] = config.get_value("encodeRightFps")
+
+        if config.get_value("encodeDepth") is not None and config.get_value("encodeDepthFps") is not None:
+            self.setData(["encodeDepth", config.get_value("encodeDepth")])
+            self.setData(["encodeDepthFps", config.get_value("encodeDepthFps")])
+            if config.get_value("encodeDepth"):
+                if hasattr(self, 'confManager'):
+                    self.confManager.args.encode["depth"] = config.get_value("encodeDepthFps")
+
+        if config.get_value("encodeIr") is not None and config.get_value("encodeIrFps") is not None:
+            self.setData(["encodeIr", config.get_value("encodeIr")])
+            self.setData(["encodeIrFps", config.get_value("encodeIrFps")])
+            # IR encoding might not be supported in args.encode directly or needs mapping
+            pass
+
+        if config.get_value("encodePointCloud") is not None:
+            self.setData(["encodePointCloud", config.get_value("encodePointCloud")])
+            # Point cloud enabled is on _demoInstance, which might not be ready if called too early
+            # But startGui runs after __init__, so _demoInstance should exist (if we fix init order)
+            if hasattr(self, '_demoInstance'):
+                self._demoInstance.pointCloudEnabled = config.get_value("encodePointCloud")
+
+        if config.get_value("reportTemp") is not None and config.get_value("reportCpu") is not None and config.get_value("reportMem") is not None:
+            self.setData(["reportTemp", config.get_value("reportTemp")])
+            self.setData(["reportCpu", config.get_value("reportCpu")])
+            self.setData(["reportMem", config.get_value("reportMem")])
+            # Reporting options are usually args
+            if config.get_value("reportTemp") or config.get_value("reportCpu") or config.get_value("reportMem"):
+                update_arg("report", True)
+                # Specific report fields might need more complex handling
         
         return self.app.exec()

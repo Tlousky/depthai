@@ -63,16 +63,16 @@ ApplicationWindow {
     Material.accent: Material.Red
     visible: true
 
-    property var previewChoices
-    property var modelChoices
-    property var modelSourceChoices
-    property var ovVersions
-    property var countLabels
-    property var medianChoices
-    property var colorResolutionChoices
-    property var monoResolutionChoices
+    property var previewChoices: []
+    property var modelChoices: []
+    property var modelSourceChoices: []
+    property var ovVersions: []
+    property var countLabels: []
+    property var medianChoices: []
+    property var colorResolutionChoices: []
+    property var monoResolutionChoices: []
     property var restartRequired
-    property var deviceChoices
+    property var deviceChoices: []
     property var irEnabled: false
     property var irDotBrightness: 0
     property var irFloodBrightness: 0
@@ -82,6 +82,69 @@ ApplicationWindow {
     property bool recording: false
 
     property bool lrc: false
+
+    // AI Properties
+    property bool nnEnabled: true
+    property string cnnModel: "mobilenet-ssd"
+    property int shaves: 6
+    property string modelSource: "color"
+    property bool fullFov: true
+    property bool sbb: false
+    property real sbbFactor: 0.3
+    property string ovVersion: "2021.4"
+    property string countLabel: "person"
+
+    // Depth Properties
+    property bool disparityEnabled: false
+    property bool subpixel: false
+    property bool extendedDisparity: false
+    property int disparityConfidenceThreshold: 240
+    property int lrcThreshold: 10
+    property int bilateralSigma: 0
+    property real depthRangeFrom: 0
+    property real depthRangeTo: 10
+    property string medianFilter: "KERNEL_7x7"
+    property int irLaserDotProjector: 0
+    property int irFloodIlluminator: 0
+
+    // Camera Properties
+    property bool sync: true
+    property bool rgbDepthAlignment: true
+    property int colorIso: 0
+    property int colorExposure: 0
+    property int colorContrast: 0
+    property int colorBrightness: 0
+    property int colorSaturation: 0
+    property int colorSharpness: 0
+    property int colorFps: 30
+    property string colorResolution: "THE_1080_P"
+    property int monoIso: 0
+    property int monoExposure: 0
+    property int monoContrast: 0
+    property int monoBrightness: 0
+    property int monoSaturation: 0
+    property int monoSharpness: 0
+    property int monoFps: 30
+    property string monoResolution: "THE_400_P"
+
+    // Misc Properties
+    property string reportPath: ""
+    property string encodeOutput: ""
+    property int encodeColorFps: 30
+    property int encodeLeftFps: 30
+    property int encodeRightFps: 30
+    property int encodeDepthFps: 30
+    property int encodeIrFps: 30
+    property bool encodeColor: true
+    property bool encodeLeft: false
+    property bool encodeRight: false
+    property bool encodeDepth: true
+    property bool encodeIr: false
+    property bool encodePointCloud: false
+    property bool reportTemp: false
+    property bool reportCpu: false
+    property bool reportMem: false
+
 
     AppBridge {
         id: appBridge

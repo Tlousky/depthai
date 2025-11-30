@@ -353,7 +353,6 @@ class Demo:
             
             filename = output_path / f"{getattr(self, '_filenamePrefix', f'pointcloud_{int(time.time())}')}_pointcloud.ply"
             o3d.io.write_point_cloud(str(filename), pcd)
-            print(f"Point Cloud saved to {filename}")
         except Exception as e:
             print(f"Failed to save Point Cloud: {e}")
             traceback.print_exc()
@@ -833,15 +832,15 @@ def runQt():
 
     class GuiApp(DemoQtGui):
         def __init__(self):
-            super().__init__()
             self.confManager = prepareConfManager(args)
+            self._demoInstance = Demo(displayFrames=False)
+            super().__init__()
             self.running = False
             self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
             self.useDisparity = False
             self.dataInitialized = False
             self.appInitialized = False
             self.threadpool = QThreadPool()
-            self._demoInstance = Demo(displayFrames=False)
 
         def updateArg(self, arg_name, arg_value, shouldUpdate=True):
             setattr(self.confManager.args, arg_name, arg_value)
@@ -910,7 +909,8 @@ def runQt():
             self.app.quit()
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None, irLaser=None, irFlood=None):
-            self._demoInstance._pm.updateDepthConfig(median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
+            if hasattr(self._demoInstance, "_pm"):
+                self._demoInstance._pm.updateDepthConfig(median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
             if median is not None:
                 if median == dai.MedianFilter.MEDIAN_OFF:
                     self.updateArg("stereoMedianSize", 0, False)
@@ -927,7 +927,8 @@ def runQt():
             if lrcThreshold is not None:
                 self.updateArg("lrcThreshold", lrcThreshold, False)
             if any([irLaser, irFlood]):
-                self._demoInstance._pm.updateIrConfig(self._demoInstance._device, irLaser, irFlood)
+                if hasattr(self._demoInstance, "_pm") and hasattr(self._demoInstance, "_device"):
+                    self._demoInstance._pm.updateIrConfig(self._demoInstance._device, irLaser, irFlood)
                 if irLaser is not None:
                     self.updateArg("irDotBrightness", irLaser, False)
                 if irFlood is not None:
@@ -961,7 +962,8 @@ def runQt():
                 config["sharpness"] = newValue
                 self.updateArg("cameraSharpness", newValue, False)
 
-            self._demoInstance._updateCameraConfigs(config)
+            if hasattr(self._demoInstance, "_pm"):
+                self._demoInstance._updateCameraConfigs(config)
 
         def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None, lrc=None):
             if depthFrom is not None:
@@ -1160,7 +1162,7 @@ def runQt():
         def guiOnToggleRecording(self):
             if self._demoInstance.recording:
                 self._demoInstance.stopRecording()
-            else:
+            elif hasattr(self._demoInstance, "_pm"): # Check if initialized
                 self._demoInstance.startRecording()
             self.window.setProperty("recording", self._demoInstance.recording)
 

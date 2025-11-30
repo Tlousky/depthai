@@ -54,6 +54,7 @@ ListView {
                     width: 140
                     height: 33
                     model: colorResolutionChoices
+                    currentIndex: colorResolutionChoices.indexOf(colorResolution)
                     onActivated: function(index) {
                         colorCamBridge.setResolution(model[index])
                     }
@@ -67,7 +68,6 @@ ListView {
                     height: 25
                     color: "#ffffff"
                     text: qsTr("FPS")
-                    font.pixelSize: 12
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.family: "Courier"
@@ -79,7 +79,7 @@ ListView {
                     y: 84
                     width: 106
                     height: 25
-                    text: "30"
+                    text: colorFps.toString()
                     bottomPadding: 5
                     placeholderText: "FPS"
                     font.family: "Courier"
@@ -120,7 +120,7 @@ ListView {
                     y: 80
                     width: 106
                     height: 25
-                    text: ""
+                    text: colorIso.toString()
                     bottomPadding: 5
                     validator: IntValidator {}
                     placeholderText: "ISO"
@@ -150,7 +150,7 @@ ListView {
                     y: 111
                     width: 106
                     height: 25
-                    text: ""
+                    text: colorExposure.toString()
                     bottomPadding: 5
                     font.family: "Courier"
                     placeholderText: qsTr("Exposure")
@@ -184,7 +184,7 @@ ListView {
                     stepSize: 1
                     to: 10
                     from: -10
-                    value: 0
+                    value: colorSaturation
                     onValueChanged: {
                         colorCamBridge.setSaturation(value)
                     }
@@ -213,7 +213,7 @@ ListView {
                     stepSize: 1
                     to: 10
                     from: -10
-                    value: 0
+                    value: colorContrast
                     onValueChanged: {
                         colorCamBridge.setContrast(value)
                     }
@@ -242,7 +242,7 @@ ListView {
                     stepSize: 1
                     to: 10
                     from: -10
-                    value: 0
+                    value: colorBrightness
                     onValueChanged: {
                         colorCamBridge.setBrightness(value)
                     }
@@ -271,7 +271,7 @@ ListView {
                     stepSize: 1
                     to: 4
                     from: 0
-                    value: 0
+                    value: colorSharpness
                     onValueChanged: {
                         colorCamBridge.setSharpness(value)
                     }
@@ -306,6 +306,7 @@ ListView {
                 width: 152
                 height: 33
                 model: monoResolutionChoices
+                currentIndex: monoResolutionChoices.indexOf(monoResolution)
                 onActivated: function(index) {
                     monoCamBridge.setResolution(model[index])
                 }
@@ -332,7 +333,7 @@ ListView {
                 y: 84
                 width: 106
                 height: 25
-                text: "30"
+                text: monoFps.toString()
                 bottomPadding: 5
                 placeholderText: "FPS"
                 font.family: "Courier"
@@ -404,7 +405,7 @@ ListView {
                     y: 80
                     width: 106
                     height: 25
-                    text: ""
+                    text: monoIso.toString()
                     bottomPadding: 5
                     placeholderText: "ISO"
                     font.family: "Courier"
@@ -420,7 +421,7 @@ ListView {
                     y: 111
                     width: 106
                     height: 25
-                    text: ""
+                    text: monoExposure.toString()
                     bottomPadding: 5
                     placeholderText: qsTr("Exposure")
                     validator: IntValidator {}
@@ -453,7 +454,7 @@ ListView {
                     stepSize: 1
                     to: 10
                     from: -10
-                    value: 0
+                    value: monoSaturation
                     onValueChanged: {
                         monoCamBridge.setSaturation(value)
                     }
@@ -483,7 +484,7 @@ ListView {
                     stepSize: 1
                     to: 10
                     from: -10
-                    value: 0
+                    value: monoContrast
                     onValueChanged: {
                         monoCamBridge.setContrast(value)
                     }
@@ -513,7 +514,7 @@ ListView {
                     stepSize: 1
                     to: 10
                     from: -10
-                    value: 0
+                    value: monoBrightness
                     onValueChanged: {
                         monoCamBridge.setBrightness(value)
                     }
@@ -543,7 +544,7 @@ ListView {
                     stepSize: 1
                     to: 4
                     from: 0
-                    value: 0
+                    value: monoSharpness
                     onValueChanged: {
                         monoCamBridge.setSharpness(value)
                     }
@@ -583,7 +584,7 @@ ListView {
             y: 158
             width: 164
             height: 28
-            checked: true
+            checked: sync
             text: qsTr("<font color=\"white\">Enable sync</font>")
             onToggled: {
                 appBridge.toggleSync(syncSwitch.checked)
@@ -594,7 +595,7 @@ ListView {
             id: rgbDepthAlignmentSwitch
             x: 203
             y: 190
-            checked: true
+            checked: rgbDepthAlignment
             width: 250
             height: 28
             text: qsTr("<font color=\"white\">RGB-Depth Alignment</font>")
