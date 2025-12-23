@@ -93,6 +93,8 @@ class ConfigManager:
         # Initialize camera flags and sockets to defaults
         self.hasStereo = self.device_name in STEREOCAMERAS
         self.hasToF = self.device_name in TOFCAMERAS
+        self.tofCameraEnabled = self.hasToF
+
         for cam in self.cameras:
             config_names = [config.type.name for config in cam.configs]
             if 'TOF' in config_names:

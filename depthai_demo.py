@@ -267,6 +267,9 @@ class Demo:
                 self._pm.createRightCam(args = self._conf.args)
             if self._conf.rgbCameraEnabled:
                 self._pm.createColorCam(args = self._conf.args).setBoardSocket(self._conf.rgbSocket)
+            if self._conf.tofCameraEnabled:
+                pass
+                # self._pm.createTofCam(args = self._conf.args).setBoardSocket(self._conf.tofSocket)
 
             if self._conf.useDepth:
                 if self._conf.hasStereo:
@@ -1211,15 +1214,9 @@ if __name__ == "__main__":
         else:
             s = Supervisor()
             if args.guiType != "cv":
-                available = s.checkQtAvailability()
-                if args.guiType == "qt" and not available:
-                    raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
-                if args.guiType == "auto" and platform.machine() == 'aarch64':  # Disable Qt by default on Jetson due to Qt issues
-                    args.guiType = "cv"
-                elif available:
-                    args.guiType = "qt"
-                else:
-                    args.guiType = "cv"
-            s.runDemo(args)
+                args.guiType = "qt"
+                s.runDemo(runQt, args)
+            else:
+                 s.runDemo(runOpenCv, args)
     except KeyboardInterrupt:
         sys.exit(0)
