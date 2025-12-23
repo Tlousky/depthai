@@ -266,10 +266,11 @@ class Demo:
             if self._conf.rightCameraEnabled:
                 self._pm.createRightCam(args = self._conf.args)
             if self._conf.rgbCameraEnabled:
-                self._pm.createColorCam(args = self._conf.args).setBoardSocket(self._conf.rgbSocket)
-            if self._conf.tofCameraEnabled:
-                pass
-                # self._pm.createTofCam(args = self._conf.args).setBoardSocket(self._conf.tofSocket)
+                colorcam = self._pm.createColorCam(args = self._conf.args)
+                colorcam.setBoardSocket(self._conf.rgbSocket)
+            # if self._conf.tofCameraEnabled:
+            #     tofcamera = self._pm.createColorCam(args = self._conf.args)
+            #     tofcamera.setBoardSocket(self._conf.tofSocket)
 
             if self._conf.useDepth:
                 if self._conf.hasStereo:
@@ -291,10 +292,6 @@ class Demo:
                     default_encode_config[Previews.left.name] = 30
                     default_encode_config[Previews.right.name] = 30
                     default_encode_config[Previews.disparity.name] = 30
-                if getattr(self._conf, 'hasToF', False):
-                    # Create ToF camera node
-                    self._pm.createTofCam(args=self._conf.args).setBoardSocket(self._conf.tofSocket)
-                    default_encode_config["tof"] = 30
             
             self._encManager = EncodingManager(default_encode_config, self._conf.args.encodeOutput)
             self._encManager.createEncoders(self._pm)

@@ -14,5 +14,7 @@
     "encodeLeft": true,
     "encodeLeftFps": 30,
     "s3_bucket": "depthai-uploads-bplinks",
-    "s3_region": "eu-north-1"
+    "s3_region": "eu-north-1",
+    "modelSource": "color",
+    "cnnModel": "openpose2"
 }
