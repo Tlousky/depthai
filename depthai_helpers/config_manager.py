@@ -93,13 +93,13 @@ class ConfigManager:
         # Initialize camera flags and sockets to defaults
         self.hasStereo = self.device_name in STEREOCAMERAS
         self.hasToF = self.device_name in TOFCAMERAS
-        if self.hasToF:
-            for cam in self.cameras:
-                if 'TOF' in [config.type.name for config in cam.configs]:
-                    self.tofSocket = cam.socket
+        for cam in self.cameras:
+            config_names = [config.type.name for config in cam.configs]
+            if 'TOF' in config_names:
+                self.tofSocket = cam.socket
 
-                if 'COLOR' in [config.type.name for config in cam.configs]:
-                    self.rgbSocket = cam.socket
+            if 'COLOR' in config_names:
+                self.rgbSocket = cam.socket
 
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
             print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
