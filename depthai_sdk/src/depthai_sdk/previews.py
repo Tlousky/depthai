@@ -224,6 +224,22 @@ class PreviewDecoder:
         """
         return cv2.applyColorMap(disparity, manager.colorMap if manager is not None else cv2.COLORMAP_JET)
 
+    @staticmethod
+    def tofDepth(packet, manager=None):
+        """
+        Produces TOF depth frame from raw data packet (converts to colormapped image)
+
+        Args:
+            packet (depthai.ImgFrame): Packet received from output queue
+            manager (depthai_sdk.managers.PreviewManager, optional): PreviewManager instance
+
+        Returns:
+            numpy.ndarray: Ready to use OpenCV frame
+        """
+        frame = packet.getFrame()
+        frame = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+        return cv2.applyColorMap(frame, manager.colorMap if manager is not None else cv2.COLORMAP_JET)
+
 
 class Previews(enum.Enum):
     """
@@ -243,6 +259,7 @@ class Previews(enum.Enum):
     depth = enum.member(partial(PreviewDecoder.depth))
     disparity = enum.member(partial(PreviewDecoder.disparity))
     disparityColor = enum.member(partial(PreviewDecoder.disparityColor))
+    tofDepth = enum.member(partial(PreviewDecoder.tofDepth))
 
 
 class MouseClickTracker:

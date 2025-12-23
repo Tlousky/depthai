@@ -189,7 +189,7 @@ class Demo:
         cam_tof.raw.link(tof.input)
 
         xout = self._pm.pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName("depth")
+        xout.setStreamName("tofDepth")
         tof.depth.link(xout.input)
 
     def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):

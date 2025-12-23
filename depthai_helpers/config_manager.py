@@ -95,6 +95,10 @@ class ConfigManager:
         self.hasToF = self.device_name in TOFCAMERAS
         self.tofCameraEnabled = self.hasToF
 
+        if self.tofCameraEnabled:
+            self.args.disableNeuralNetwork = False
+            self.args.useNN = False
+
         for cam in self.cameras:
             config_names = [config.type.name for config in cam.configs]
             if cam.sensorName == 'S5K33D':
@@ -126,7 +130,7 @@ class ConfigManager:
 
     @property
     def useNN(self):
-        return not self.args.disableNeuralNetwork
+        return not self.args.disableNeuralNetwork and not (self.tofCameraEnabled or self.hasToF)
 
     @property
     def useDepth(self):
@@ -200,8 +204,12 @@ class ConfigManager:
 
     def adjustPreviewToOptions(self):
         if len(self.args.show) != 0:
-            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name,
-                             Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
+            depthPreviews = [
+                Previews.rectifiedRight.name, Previews.rectifiedLeft.name,
+                Previews.depth.name, Previews.depthRaw.name,
+                Previews.disparity.name, Previews.disparityColor.name,
+                Previews.tofDepth.name
+            ]
 
             if len([preview for preview in self.args.show if preview in depthPreviews]) == 0 and not self.useNN:
                 print("No depth-related previews chosen, disabling depth...")
@@ -223,6 +231,8 @@ class ConfigManager:
                     self.args.show.append(Previews.depthRaw.name)
                 self.args.show.append(Previews.rectifiedLeft.name)
                 self.args.show.append(Previews.rectifiedRight.name)
+            elif self.hasToF:
+                self.args.show.append(Previews.tofDepth.name)
             else:
                 self.args.show.append(Previews.left.name)
                 self.args.show.append(Previews.right.name)
@@ -247,7 +257,7 @@ class ConfigManager:
                              PrintColors.RED)
 
         if not depthEnabled:
-            if not self.args.disableDepth:
+            if not self.args.disableDepth and not self.hasToF:
                 print("Disabling depth...")
                 self.args.disableDepth = True
             if self.args.spatialBoundingBox:

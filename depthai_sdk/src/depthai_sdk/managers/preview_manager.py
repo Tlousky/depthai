@@ -118,6 +118,9 @@ class PreviewManager:
                 rawFrame = packet.getFrame()  # if not self.decode else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
                 self._mouseTracker.extractValue(Previews.depthRaw.name, rawFrame)
                 self._mouseTracker.extractValue(Previews.depth.name, rawFrame)
+            elif name == Previews.tofDepth.name:
+                rawFrame = packet.getFrame()
+                self._mouseTracker.extractValue(Previews.tofDepth.name, rawFrame)
             else:
                 self._mouseTracker.extractValue(name, frame)
 
