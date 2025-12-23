@@ -22,11 +22,85 @@ class ConfigManager:
     def __init__(self, args):
         self.args = args 
 
+        # Connect to the device
+        with dai.Device() as device:
+            cliPrint(f"Device connected: {device.getMxId()}", print_color=PrintColors.GREEN)
+            cliPrint(f"Device name: {device.getDeviceName()}", print_color=PrintColors.GREEN)
+            cliPrint("-" * 50, print_color=PrintColors.GREEN)
+            
+            self.device_id = device.getMxId()
+            self.device_name = device.getDeviceName()
+
+            # Get connected camera features
+            cliPrint("Connected Camera Features:", print_color=PrintColors.GREEN)
+            cameras = device.getConnectedCameraFeatures()
+            
+            self.cameras = cameras
+
+            resolutions = {}
+            for cam in cameras:
+                cliPrint(f"\nCamera on Socket: {cam.socket}", print_color=PrintColors.GREEN)
+                cliPrint(f"  Sensor Name: {cam.sensorName}", print_color=PrintColors.GREEN)
+                cliPrint(f"  Supported Types (Resolutions):", print_color=PrintColors.GREEN)
+                for config in cam.configs:
+                    resolutions[config.type.name] = {'width' : config.width, 'height' : config.height}
+
+            cliPrint(resolutions, print_color=PrintColors.GREEN)
+            # Example output for Oak TOF PoE: {'TOF': {'width': 1280, 'height': 3848}, 'COLOR': {'width': 640, 'height': 400}}  
+
+        self.resolutions = resolutions
+
         # Get resolution width as it's required by some functions
-        self.rgbResWidth = self.rgbResolutionWidth(self.args.rgbResolution)
+        if self.args.rgbResolution is not None:
+             try:
+                 self.rgbResWidth = self.rgbResolutionWidth(self.args.rgbResolution)
+             except:
+                 self.rgbResWidth = resolutions['COLOR']['width']
+        else:
+             self.rgbResWidth = resolutions['COLOR']['width']
+
+        # Ensure args.show is a list to prevent TypeError in GuiApp
+        if self.args.show is None:
+            self.args.show = []
 
         self.args.encode = dict(self.args.encode)
         self.args.cameraOrientation = dict(self.args.cameraOrientation)
+
+        self.ColorCameraResolutions = [
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_720_P, 'width': 1280, 'height': 720},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_800_P, 'width': 1280, 'height': 800},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_1080_P, 'width': 1920, 'height': 1080},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_4_K, 'width': 3840, 'height': 2160},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_12_MP, 'width': 4056, 'height': 3040},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_13_MP, 'width': 4208, 'height': 3120},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_4000X3000, 'width': 4000, 'height': 3000},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_5312X6000, 'width': 5312, 'height': 6000},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_48_MP, 'width': 8000, 'height': 6000},
+            {'type': dai.ColorCameraProperties.SensorResolution.THE_1440X1080, 'width': 1440, 'height': 1080}
+        ]
+
+        self.MonoCameraResolutions = [
+            {'type': dai.MonoCameraProperties.SensorResolution.THE_400_P, 'width': 640, 'height': 400},
+            {'type': dai.MonoCameraProperties.SensorResolution.THE_480_P, 'width': 640, 'height': 480},
+            {'type': dai.MonoCameraProperties.SensorResolution.THE_720_P, 'width': 1280, 'height': 720},
+            {'type': dai.MonoCameraProperties.SensorResolution.THE_800_P, 'width': 1280, 'height': 800},
+            {'type': dai.MonoCameraProperties.SensorResolution.THE_1200_P, 'width': 1920, 'height': 1200}
+        ]
+        
+        TOFCAMERAS = ['OAK-D-SR-POE']
+        STEREOCAMERAS = ['']
+
+        # Initialize camera flags and sockets to defaults
+        self.hasStereo = self.device_name in STEREOCAMERAS
+        self.hasToF = self.device_name in TOFCAMERAS
+        if self.hasToF:
+            for cam in self.cameras:
+                if 'TOF' in [config.type.name for config in cam.configs]:
+                    self.tofSocket = cam.socket
+
+                if 'COLOR' in [config.type.name for config in cam.configs]:
+                    self.rgbSocket = cam.socket
+
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
             print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
 
@@ -139,42 +213,253 @@ class ConfigManager:
                 self.args.disableDepth = True
             return
 
-        self.args.show.append(Previews.color.name)
-        if self.useDepth:
-            self.args.show.append(Previews.disparityColor.name)
+        if Previews.color.name not in self.args.show:
+             self.args.show.append(Previews.color.name)
+        
+        # Defensive cleanup: Ensure strictly valid streams
+        if not getattr(self, 'hasStereo', False) and Previews.depthRaw.name in self.args.show:
+            print(f"DEBUG: Removing depthRaw because hasStereo is False")
+            self.args.show.remove(Previews.depthRaw.name)
+            
+        if self.lowBandwidth and Previews.depthRaw.name in self.args.show:
+             print(f"DEBUG: Removing depthRaw because lowBandwidth is True")
+             self.args.show.remove(Previews.depthRaw.name)
 
         if self.args.guiType == "qt":
             if self.useNN:
                 self.args.show.append(Previews.nnInput.name)
-
+ 
             if self.useDepth:
-                if self.lowBandwidth:
-                    self.args.show.append(Previews.disparityColor.name)
-                else:
-                    self.args.show.append(Previews.depthRaw.name)
-                self.args.show.append(Previews.rectifiedLeft.name)
-                self.args.show.append(Previews.rectifiedRight.name)
+                if getattr(self, 'hasStereo', False):
+                    if self.lowBandwidth:
+                        # Ensure we don't duplicate
+                        if Previews.disparityColor.name not in self.args.show:
+                             self.args.show.append(Previews.disparityColor.name)
+                    else:
+                        if Previews.depthRaw.name not in self.args.show:
+                             self.args.show.append(Previews.depthRaw.name)
+                        if Previews.depth.name not in self.args.show:
+                             self.args.show.append(Previews.depth.name)
+
+                    if Previews.rectifiedLeft.name not in self.args.show:
+                        self.args.show.append(Previews.rectifiedLeft.name)
+                    if Previews.rectifiedRight.name not in self.args.show:
+                        self.args.show.append(Previews.rectifiedRight.name)
+
+                if getattr(self, 'hasToF', False):
+                    if Previews.tof.name not in self.args.show:
+                        self.args.show.append(Previews.tof.name)
             else:
-                self.args.show.append(Previews.left.name)
-                self.args.show.append(Previews.right.name)
+                if getattr(self, 'hasStereo', False):
+                    self.args.show.append(Previews.left.name)
+                    self.args.show.append(Previews.right.name)
+                
+                if getattr(self, 'hasToF', False):
+                    self.args.show.append(Previews.tof.name)
+
+    def getResolutionSize(self, res: dai.ColorCameraProperties.SensorResolution) -> tuple:
+        for resolution in self.ColorCameraResolutions:
+            if res == resolution['type']:
+                return (resolution['width'], resolution['height'])
+        return (0, 0) # Unknown
+
+    def getMonoResolutionSize(self, res: dai.MonoCameraProperties.SensorResolution) -> tuple:
+        for resolution in self.MonoCameraResolutions:
+            if res == resolution['type']:
+                return (resolution['width'], resolution['height'])
+        return (0, 0)
+
+
 
     def adjustParamsToDevice(self, device):
         deviceInfo = device.getDeviceInfo()
         cams = device.getConnectedCameras()
-        depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+        features = device.getConnectedCameraFeatures()
+        
+        self.hasStereo = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+        self.hasToF = any(dai.CameraSensorType.TOF in f.supportedTypes for f in features)
+        depthEnabled = self.hasStereo
 
         sensorNames = device.getCameraSensorNames()
+        
+        # New Device Detection Logic based on Name
+        deviceName = device.getDeviceName()
+        print(f"Detected device: {deviceName}")
+
+        # Check specific models first
+        is_tof_poe = "OAK-D-SR-POE" in deviceName or "TOF" in deviceName
+        is_generic_oak_d = "OAK-D" in deviceName and not is_tof_poe
+        
+        self.hasStereo = is_generic_oak_d or 'OAK-D-PRO-W' in deviceName
+        self.hasToF = is_tof_poe
+
+        if self.args.disableDepth is None:
+            self.args.disableDepth = not is_generic_oak_d # True for generic OAK-D, False (Enabled) for ToF/SR
+             
+        if self.args.disableNeuralNetwork is None:
+             self.args.disableNeuralNetwork = not is_generic_oak_d
+
+        if self.args.extendedDisparity is None:
+             self.args.extendedDisparity = not is_generic_oak_d
+
+
+        if self.hasStereo and self.hasToF:
+             # Hybrid handling, if needed - SR-POE might identify as Stereo+ToF
+             # For default 'show', refrain from showing All stereo streams if it crashes
+             pass
+        elif not self.hasStereo and not self.hasToF:
+             # Fallback to feature detection if name didn't catch it
+             self.hasStereo = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+             self.hasToF = any(dai.CameraSensorType.TOF in f.supportedTypes for f in features)
+
+        depthEnabled = self.hasStereo #or self.hasToF
+
+        if not self.args.show:
+             self.args.show = []
+             if is_tof_poe:
+                 self.args.show = ["color", "tof"]
+                 if self.useNN: self.args.show.append("nnInput")
+             elif self.hasStereo:
+                 self.args.show = ["color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight"]
+                 if self.useNN: self.args.show.append("nnInput")
+             else:
+                  self.args.show = ["color"]
+
+        self.rgbSocket = None
+        self.tofSocket = None
+        
+        # Identify sockets for specific roles
+        for f in features:
+            if dai.CameraSensorType.TOF in f.supportedTypes:
+                self.tofSocket = f.socket
+            elif dai.CameraSensorType.COLOR in f.supportedTypes:
+                # If multiple color cameras, prefer RGB (A) or Center (B for 3-cam)? 
+                # Usually RGB is main. If we haven't found one, take it.
+                # Or prefer existing logic.
+                if self.rgbSocket is None:
+                    self.rgbSocket = f.socket
+                elif f.socket == dai.CameraBoardSocket.RGB or f.socket == dai.CameraBoardSocket.CAM_A:
+                    self.rgbSocket = f.socket # Prefer A/RGB
+        
+        # smart resolution adjustment
+        # Use identified rgbSocket if available, or fall back to probing if logic above missed something (unlikely)
+        if self.rgbSocket:
+            target_feat = next((f for f in features if f.socket == self.rgbSocket), None)
+            if target_feat:
+                rgb_feat = target_feat
+                
+                # Check if current resolution is supported by the sensor
+                is_supported = False
+                supported_width = 1920 # default
+                
+                for config in rgb_feat.configs:
+                    if config.type == self.args.rgbResolution:
+                        is_supported = True
+                        supported_width = config.width
+                        break
+                
+                if not is_supported:
+                    print(f"[WARNING] Selected resolution {self.args.rgbResolution} not supported by sensor {rgb_feat.name}. Adjusting...")
+                    
+                    # Find best fit (largest resolution)
+                    best_res = None
+                    max_pixels = 0
+                    best_config_dims = None
+                    for config in rgb_feat.configs:
+                        # Calculate pixels from config width/height directly
+                        pixels = config.width * config.height
+                        if pixels > max_pixels:
+                            max_pixels = pixels
+                            best_config_dims = (config.width, config.height)
+                            supported_width = config.width
+
+                    if best_config_dims:
+                        for res in self.ColorCameraResolutions:
+                            if res['width'] == best_config_dims[0] and res['height'] == best_config_dims[1]:
+                                best_res = res['type']
+                                break
+                    
+                    if best_res:
+                        print(f"Downgrading to {best_res}")
+                        self.args.rgbResolution = best_res
+                    else:
+                        print(f"Could not find a suitable resolution in configs, trying fallbacks...")
+                        # Fallback logic if configs is empty (should ideally not happen with recent FW)
+                        if rgb_feat.width == 1280:
+                             self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_800_P
+                             supported_width = 1280
+                        elif rgb_feat.width > 1920:
+                             self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+                             supported_width = 1920
+                        else:
+                             self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_800_P
+                             supported_width = 1280
+
+                # Update rgbResWidth directly from the validated config
+                self.rgbResWidth = supported_width
+
+        # Dynamic Resolution Setting if None
+        if self.args.rgbResolution is None:
+             if self.rgbSocket is not None:
+                # Find max resoluton
+                max_res = None
+                max_pixels = 0
+                max_width = 1920
+                feat = next(f for f in features if f.socket == self.rgbSocket)
+                
+                # Correctly iterate over configs (resolutions) instead of supportedTypes (sensor types)
+                for config in feat.configs:
+                     w, h = config.width, config.height
+                     if w * h > max_pixels:
+                          max_pixels = w * h
+                          max_res = config.type
+                          max_width = w
+                          
+                if max_res:
+                     self.args.rgbResolution = max_res
+                     self.rgbResWidth = max_width
+                else: 
+                     self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P # Fallback
+                     self.rgbResWidth = 1920
+             else:
+                 self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+                 self.rgbResWidth = 1920
+
+        if self.args.rgbFps is None:
+            self.args.rgbFps = 30.0 # Default 30, simplified. Camera specific max retrieval is complex without opening it.
+        
+        # Mono defaults
+        if self.args.monoResolution is None:
+             # Find mono cameras
+             mono_sockets = [f.socket for f in features if dai.CameraSensorType.MONO in f.supportedTypes]
+             if mono_sockets:
+                 # Check first mono cam
+                 feat = next(f for f in features if f.socket == mono_sockets[0])
+                 max_res = None
+                 max_pixels = 0
+                 for res in feat.supportedTypes:
+                      w, h = self.getMonoResolutionSize(res)
+                      if w * h > max_pixels:
+                           max_pixels = w * h
+                           max_res = res
+                 if max_res:
+                      self.args.monoResolution = max_res
+                 else:
+                      self.args.monoResolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
+             else:
+                 self.args.monoResolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
+        
+        if self.args.monoFps is None:
+            self.args.monoFps = 30.0
+            
+        # Update rgbResWidth as it is now certainly set - REMOVED redundant check
+        # Legacy OV9782 check (keep for backward compatibility if features fail, though above should handle it)
         if dai.CameraBoardSocket.RGB in cams:
             name = sensorNames[dai.CameraBoardSocket.RGB]
             if name == 'OV9782':
                 if self.rgbResWidth not in [720, 800]:
                     self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_800_P
                     cliPrint(f'{name} requires 720 or 800 resolution, defaulting to {self.args.rgbResolution}', 
-                             PrintColors.RED)
-            else:
-                if self.rgbResWidth in [720, 800]:
-                    self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
-                    cliPrint(f'{name} doesn\'t support 720 / 800 resolutions, defaulting to {self.args.rgbResolution}', 
                              PrintColors.RED)
 
         if not depthEnabled:
@@ -212,6 +497,9 @@ class ConfigManager:
             else:
                 self.args.bandwidth = "high"
 
+        # Check if we have stereo cameras
+        self.hasStereo = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
             ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -241,19 +529,20 @@ After executing these commands, disconnect and reconnect USB cable to your OAK d
         return (self.args.camera == Previews.left.name and self.useNN) or \
                Previews.left.name in self.args.show or \
                Previews.rectifiedLeft.name in self.args.show or \
-               self.useDepth
+               (self.useDepth and getattr(self, 'hasStereo', True))
 
     @property
     def rightCameraEnabled(self):
         return (self.args.camera == Previews.right.name and self.useNN) or \
                Previews.right.name in self.args.show or \
                Previews.rectifiedRight.name in self.args.show or \
-               self.useDepth
+               (self.useDepth and getattr(self, 'hasStereo', True))
 
     @property
     def rgbCameraEnabled(self):
-        return (self.args.camera == Previews.color.name and self.useNN) or \
-               Previews.color.name in self.args.show
+        has_socket = getattr(self, 'rgbSocket', None) is not None
+        return has_socket and ((self.args.camera == Previews.color.name and self.useNN) or \
+               Previews.color.name in self.args.show)
 
     @property
     def inputSize(self):

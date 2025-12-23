@@ -146,6 +146,10 @@ class NNetManager:
         if self.inputSize is None:
             raise RuntimeError("Unable to determine the nn input size. Please use --cnnInputSize flag to specify it in WxH format: -nnSize <width>x<height>")
 
+        if useDepth and not hasattr(nodes, 'stereo'):
+            print("[WARNING] Depth enabled but StereoDepth node not found. Disabling spatial NN.")
+            useDepth = False
+
         self.source = source
         self._fullFov = fullFov
         if self._nnFamily == "mobilenet":

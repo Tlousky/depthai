@@ -80,6 +80,8 @@ ApplicationWindow {
     property var statisticsAccepted: true
     property var runningApp
     property bool recording: false
+    property bool hasStereo: true
+    property bool hasToF: false
 
     property bool lrc: false
 
@@ -139,6 +141,8 @@ ApplicationWindow {
     property bool encodeLeft: false
     property bool encodeRight: false
     property bool encodeDepth: true
+    property bool encodeTof: false
+    property int encodeTofFps: 30
     property bool encodeIr: false
     property bool encodePointCloud: false
     property bool reportTemp: false

@@ -1,4 +1,5 @@
 {
+    "user_id": "tamir_test",
     "irLaserDotProjector": 550,
     "irFloodIlluminator": 550,
     "nnEnabled": false,
@@ -14,5 +15,8 @@
     "encodeLeft": true,
     "encodeLeftFps": 30,
     "s3_bucket": "depthai-uploads-bplinks",
-    "s3_region": "eu-north-1"
+    "s3_region": "eu-north-1",
+    "encodeIr": false,
+    "encodeIrFps": 30,
+    "encodeOutput": "E:\\CamTest"
 }

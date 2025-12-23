@@ -190,7 +190,18 @@ class Demo:
         self._conf = conf
         if self._conf.args.openvinoVersion:
             self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + self._conf.args.openvinoVersion)
-        self._deviceInfo = getDeviceInfo(self._conf.args.deviceId, args.debug)
+        
+        # Retry getting device info, as PoE devices might be flaky during discovery
+        for i in range(5):
+            try:
+                self._deviceInfo = getDeviceInfo(self._conf.args.deviceId, args.debug)
+                break
+            except RuntimeError as e:
+                print(f"Device not found yet, retrying... ({i+1}/5)")
+                if i == 4:
+                    raise e
+                time.sleep(1)
+
         if self._conf.args.reportFile:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
@@ -255,10 +266,11 @@ class Demo:
             if self._conf.rightCameraEnabled:
                 self._pm.createRightCam(args = self._conf.args)
             if self._conf.rgbCameraEnabled:
-                self._pm.createColorCam(args = self._conf.args)
+                self._pm.createColorCam(args = self._conf.args).setBoardSocket(self._conf.rgbSocket)
 
             if self._conf.useDepth:
-                self._pm.createDepth(args = self._conf.args)
+                if self._conf.hasStereo:
+                    self._pm.createDepth(args = self._conf.args)
 
             if self._conf.irEnabled(self._device):
                 self._pm.updateIrConfig(self._device, self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness)
@@ -270,10 +282,16 @@ class Demo:
             }
             
             # Add depth-related streams if depth is enabled
+            # Add depth-related streams if depth is enabled
             if self._conf.useDepth:
-                default_encode_config[Previews.left.name] = 30
-                default_encode_config[Previews.right.name] = 30
-                default_encode_config[Previews.disparity.name] = 30
+                if getattr(self._conf, 'hasStereo', True):
+                    default_encode_config[Previews.left.name] = 30
+                    default_encode_config[Previews.right.name] = 30
+                    default_encode_config[Previews.disparity.name] = 30
+                if getattr(self._conf, 'hasToF', False):
+                    # Create ToF camera node
+                    self._pm.createTofCam(args=self._conf.args).setBoardSocket(self._conf.tofSocket)
+                    default_encode_config["tof"] = 30
             
             self._encManager = EncodingManager(default_encode_config, self._conf.args.encodeOutput)
             self._encManager.createEncoders(self._pm)
@@ -367,11 +385,14 @@ class Demo:
         self._logOut = self._device.getOutputQueue("systemLogger", maxSize=30, blocking=False) if len(self._conf.args.report) > 0 else None
 
         if self._conf.useDepth:
-            self._medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
-            for medFilter in self._medianFilters:
-                # move the cycle to the current median filter
-                if medFilter == self._pm._depthConfig.postProcessing.median:
-                    break
+            if getattr(self._conf, 'hasStereo', False):
+                self._medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
+                for medFilter in self._medianFilters:
+                    # move the cycle to the current median filter
+                    if medFilter == self._pm._depthConfig.postProcessing.median:
+                        break
+            else:
+                 self._medianFilters = []
         else:
             self._medianFilters = []
 
@@ -734,14 +755,32 @@ def runQt():
                     devices = dai.XLinkConnection.getAllConnectedDevices()
                 else:
                     devices = dai.Device.getAllAvailableDevices()
-                if len(devices) > 0:
-                    defaultDevice = next(map(
-                        lambda info: info.getMxId(),
-                        filter(lambda info: info.protocol == dai.XLinkProtocol.X_LINK_USB_VSC, devices)
-                    ), None)
-                    if defaultDevice is None:
-                        defaultDevice = devices[0].getMxId()
-                    self.conf.args.deviceId = defaultDevice
+
+                # Filter for USB devices
+                usb_devices = list(filter(lambda info: info.protocol == dai.XLinkProtocol.X_LINK_USB_VSC, devices))
+
+                if len(usb_devices) > 0:
+                    self.conf.args.deviceId = usb_devices[0].getMxId()
+                else:
+                    # If no USB, try searching for PoE for a few seconds
+                    print("No USB devices found, searching for PoE devices...")
+                    start_time = time.time()
+                    while time.time() - start_time < 5:
+                        if args.debug:
+                            devices = dai.XLinkConnection.getAllConnectedDevices()
+                        else:
+                            devices = dai.Device.getAllAvailableDevices()
+
+                        poe_devices = list(filter(lambda info: info.protocol == dai.XLinkProtocol.X_LINK_TCP_IP, devices))
+                        if len(poe_devices) > 0:
+                            self.conf.args.deviceId = poe_devices[0].getMxId()
+                            print(f"Found PoE device: {self.conf.args.deviceId}")
+                            break
+                        time.sleep(0.5)
+
+                    # Fallback to any device if still nothing found (e.g. Bootloader or other protocols)
+                    if self.conf.args.deviceId is None and len(devices) > 0:
+                        self.conf.args.deviceId = devices[0].getMxId()
             if Previews.color.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.color.name)
             if self.conf.useNN and Previews.nnInput.name not in self.conf.args.show:
@@ -754,14 +793,20 @@ def runQt():
                 self.conf.args.show.append(Previews.disparity.name)
             if self.conf.useDepth and self.parent.useDisparity and Previews.disparityColor.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.disparityColor.name)
-            if Previews.left.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.left.name)
-            if self.conf.useDepth and Previews.rectifiedLeft.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.rectifiedLeft.name)
-            if Previews.right.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.right.name)
-            if self.conf.useDepth and Previews.rectifiedRight.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.rectifiedRight.name)
+            if getattr(self.conf, 'hasStereo', True):
+                if Previews.left.name not in self.conf.args.show:
+                    self.conf.args.show.append(Previews.left.name)
+                if self.conf.useDepth and Previews.rectifiedLeft.name not in self.conf.args.show:
+                    self.conf.args.show.append(Previews.rectifiedLeft.name)
+                if Previews.right.name not in self.conf.args.show:
+                    self.conf.args.show.append(Previews.right.name)
+                if self.conf.useDepth and Previews.rectifiedRight.name not in self.conf.args.show:
+                    self.conf.args.show.append(Previews.rectifiedRight.name)
+            else:
+                # Remove stereo streams if they were added by default but we don't have stereo
+                for name in [Previews.left.name, Previews.rectifiedLeft.name, Previews.right.name, Previews.rectifiedRight.name]:
+                    if name in self.conf.args.show:
+                        self.conf.args.show.remove(name)
             try:
                 self.instance.run_all(self.conf)
             except KeyboardInterrupt:
@@ -811,7 +856,35 @@ def runQt():
             if "onSetup" in self.file_callbacks:
                 self.file_callbacks["onSetup"](instance)
             self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
-            self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
+            
+            # Dynamic preview choices based on what's available
+            available_previews = []
+            # Start with what was requested via args/config
+            requested_previews = self.conf.args.show
+            
+            hasStereo = getattr(self.conf, 'hasStereo', True)
+            hasToF = getattr(self.conf, 'hasToF', False)
+            
+            # Filter logic (similar to guiOnToggleDepth but for initial setup)
+            for p in requested_previews:
+                if p in [Previews.left.name, Previews.right.name, Previews.rectifiedLeft.name, Previews.rectifiedRight.name, Previews.disparity.name, Previews.disparityColor.name]:
+                    if hasStereo:
+                        available_previews.append(p)
+                elif p in [Previews.depth.name, Previews.depthRaw.name]:
+                    if hasStereo or hasToF:
+                        available_previews.append(p)
+                elif p == Previews.color.name:
+                    if self.conf.rgbCameraEnabled:
+                        available_previews.append(p)
+                else:
+                    available_previews.append(p)
+            
+            # Ensure at least valid defaults if list is empty (shouldn't happen with ConfigManager logic but safe to check)
+            if not available_previews:
+                if self.conf.rgbCameraEnabled:
+                    available_previews.append("color")
+
+            self.signals.setDataSignal.emit(["previewChoices", available_previews])
             devices = []
             if args.debug:
                 devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
@@ -827,6 +900,8 @@ def runQt():
             self.signals.setDataSignal.emit(["irDotBrightness", self.conf.args.irDotBrightness if self.conf.irEnabled(instance._device) else 0])
             self.signals.setDataSignal.emit(["irFloodBrightness", self.conf.args.irFloodBrightness if self.conf.irEnabled(instance._device) else 0])
             self.signals.setDataSignal.emit(["lrc", self.conf.args.stereoLrCheck])
+            self.signals.setDataSignal.emit(["hasStereo", getattr(self.conf, 'hasStereo', True)])
+            self.signals.setDataSignal.emit(["hasToF", getattr(self.conf, 'hasToF', False)])
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
@@ -1093,11 +1168,31 @@ def runQt():
 
         def guiOnToggleDepth(self, value):
             self.updateArg("disableDepth", not value)
-            selectedPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name] + ([Previews.disparity.name, Previews.disparityColor.name] if self.useDisparity else [Previews.depth.name, Previews.depthRaw.name])
-            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
-            filtered = list(filter(lambda name: name not in depthPreviews, self.confManager.args.show))
+            
+            depthPreviews = []
+            hasStereo = getattr(self.confManager, 'hasStereo', True)
+            hasToF = getattr(self.confManager, 'hasToF', False)
+            
+            if hasStereo:
+                depthPreviews.extend([Previews.rectifiedRight.name, Previews.rectifiedLeft.name])
+                
+                if self.useDisparity:
+                    depthPreviews.extend([Previews.disparity.name, Previews.disparityColor.name])
+                else:
+                    depthPreviews.extend([Previews.depth.name, Previews.depthRaw.name])
+                
+            if hasToF:
+                depthPreviews.append(Previews.tof.name)
+
+            # Previews to filter out when disabling
+            allDepthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, 
+                                Previews.disparity.name, Previews.disparityColor.name, 
+                                Previews.depth.name, Previews.depthRaw.name]
+                                
+            filtered = list(filter(lambda name: name not in allDepthPreviews, self.confManager.args.show))
+            
             if value:
-                updated = filtered + selectedPreviews
+                updated = filtered + depthPreviews
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
@@ -1150,10 +1245,17 @@ def runQt():
                 self.updateArg("show", updated)
         def guiOnToggleDepthEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}
+            
+            streamName = "disparity"
+            if not getattr(self.confManager, 'hasStereo', True) and getattr(self.confManager, 'hasToF', False):
+                streamName = "tof"
+                
             if enabled:
-                oldConfig["disparity"] = fps
-            elif "disparity" in self.confManager.args.encode:
-                del oldConfig["disparity"]
+                oldConfig[streamName] = fps
+            else:
+                if "disparity" in oldConfig: del oldConfig["disparity"]
+                if "depth" in oldConfig: del oldConfig["depth"]
+                
             self.updateArg("encode", oldConfig)
 
         def guiOnTogglePointCloud(self, enabled):
@@ -1184,24 +1286,52 @@ def runOpenCv():
 
 if __name__ == "__main__":
     try:
-        if args.noSupervisor:
-            if args.guiType == "qt":
-                runQt()
-            else:
-                args.guiType = "cv"
-                runOpenCv()
+        # User requested to remove Supervisor subprocess for debugging.
+        # We manually set the environment variables that Supervisor was setting.
+        
+        # Check Qt Availability (replicating logic simplified)
+        has_qt = False
+        try:
+            import importlib.util
+            if importlib.util.find_spec("PyQt5"):
+                has_qt = True
+        except:
+            pass
+
+        if args.guiType == "auto":
+             if platform.machine() == 'aarch64':
+                 args.guiType = "cv"
+             elif has_qt:
+                 args.guiType = "qt"
+             else:
+                 args.guiType = "cv"
+
+        if args.guiType == "qt":
+            if not has_qt:
+                 raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
+            
+            # Set Environment Variables for Qt
+            os.environ["QT_QUICK_BACKEND"] = "software"
+            os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
+            
+            # Attempt to set LD_LIBRARY_PATH if relevant (mostly Linux, but keeping for parity if user switches OS)
+            try:
+                import importlib.util
+                qt_spec = importlib.util.find_spec("PyQt5")
+                if qt_spec and qt_spec.origin:
+                    qt_lib_path = str(Path(qt_spec.origin).parent / "Qt5/lib")
+                    if "LD_LIBRARY_PATH" in os.environ:
+                        os.environ["LD_LIBRARY_PATH"] += os.pathsep + qt_lib_path
+                    else:
+                         os.environ["LD_LIBRARY_PATH"] = qt_lib_path
+            except:
+                pass
+
+            runQt()
         else:
-            s = Supervisor()
-            if args.guiType != "cv":
-                available = s.checkQtAvailability()
-                if args.guiType == "qt" and not available:
-                    raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
-                if args.guiType == "auto" and platform.machine() == 'aarch64':  # Disable Qt by default on Jetson due to Qt issues
-                    args.guiType = "cv"
-                elif available:
-                    args.guiType = "qt"
-                else:
-                    args.guiType = "cv"
-            s.runDemo(args)
+            # OpenCV Mode
+            os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
+            runOpenCv()
+
     except KeyboardInterrupt:
         sys.exit(0)

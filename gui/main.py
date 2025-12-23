@@ -7,8 +7,9 @@ import cv2
 from PyQt5.QtQml import QQmlApplicationEngine, qmlRegisterType, qmlRegisterSingletonType, QQmlEngine
 from PyQt5.QtQuick import QQuickPaintedItem
 from PyQt5.QtGui import QImage
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool, QRectF
 import depthai as dai
+import numpy as np
 
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
@@ -47,7 +48,7 @@ class ImageWriter(QQuickPaintedItem):
         self.setProperty("parent", parent)
 
     def paint(self, painter):
-        painter.drawImage(0, 0, self.frame)
+        painter.drawImage(QRectF(0, 0, self.width(), self.height()), self.frame)
 
     def update_frame(self, image):
         self.frame = image
@@ -156,6 +157,12 @@ class AppBridge(QObject):
         ConfigHandler().set_value("encodeIr", enabled)
         ConfigHandler().set_value("encodeIrFps", fps)
         instance.guiOnToggleIrEncoding(enabled, fps)
+
+    @pyqtSlot(bool, int)
+    def toggleTofEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeTof", enabled)
+        ConfigHandler().set_value("encodeTofFps", fps)
+        instance.guiOnToggleTofEncoding(enabled, fps)
 
     @pyqtSlot()
     def toggleRecording(self):
@@ -434,14 +441,28 @@ class DemoQtGui:
         self.window.setProperty(name, value)
 
     def updatePreview(self, frame):
-        w, h = int(self.writer.width()), int(self.writer.height())
-        scaledFrame = resizeLetterbox(frame, (w, h))
-        if len(frame.shape) == 3:
+        # Pass the original frame to ImageWriter. The paint() method handles scaling to the view.
+        # This avoids stride/alignment issues caused by resizing to odd GUI dimensions.
+        scaledFrame = frame
+        
+        frameH, frameW = scaledFrame.shape[:2]
+        if len(scaledFrame.shape) == 3:
+            # ensure contiguous array for QImage
+            if not scaledFrame.flags['C_CONTIGUOUS']:
+                scaledFrame = np.ascontiguousarray(scaledFrame)
+            
+            bytesPerLine = frameW * 3
             if colorMode == QImage.Format_RGB888:
                 scaledFrame = cv2.cvtColor(scaledFrame, cv2.COLOR_RGB2BGR)
-            img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, colorMode)
+            img = QImage(scaledFrame.data, frameW, frameH, bytesPerLine, colorMode)
         else:
-            img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
+            if not scaledFrame.flags['C_CONTIGUOUS']:
+                scaledFrame = np.ascontiguousarray(scaledFrame)
+            bytesPerLine = frameW
+            img = QImage(scaledFrame.data, frameW, frameH, bytesPerLine, QImage.Format_Grayscale8)
+            
+        # Keep a reference to the numpy array to prevent it from being garbage collected
+        img.__data_ref__ = scaledFrame
         self.writer.update_frame(img)
 
     def updateDownloadProgress(self, curr, total):
@@ -917,6 +938,19 @@ class DemoQtGui:
             # But startGui runs after __init__, so _demoInstance should exist (if we fix init order)
             if hasattr(self, '_demoInstance'):
                 self._demoInstance.pointCloudEnabled = config.get_value("encodePointCloud")
+
+        # The following methods are assumed to be part of the class containing this code
+        # and are placed here based on the instruction's context for insertion.
+        def guiOnToggleTofEncoding(self, enabled, fps):
+            oldConfig = self.confManager.args.encode or {}
+            if enabled:
+                oldConfig["tof"] = fps
+            elif "tof" in oldConfig:
+                del oldConfig["tof"]
+            self.updateArg("encode", oldConfig)
+
+        def guiOnTogglePointCloud(self, enabled):
+            self._demoInstance.pointCloudEnabled = enabled
 
         if config.get_value("reportTemp") is not None and config.get_value("reportCpu") is not None and config.get_value("reportMem") is not None:
             self.setData(["reportTemp", config.get_value("reportTemp")])

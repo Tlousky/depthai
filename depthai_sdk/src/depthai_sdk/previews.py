@@ -243,6 +243,7 @@ class Previews(enum.Enum):
     depth = enum.member(partial(PreviewDecoder.depth))
     disparity = enum.member(partial(PreviewDecoder.disparity))
     disparityColor = enum.member(partial(PreviewDecoder.disparityColor))
+    tof = enum.member(partial(PreviewDecoder.color))
 
 
 class MouseClickTracker:

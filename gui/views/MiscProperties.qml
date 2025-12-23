@@ -68,6 +68,7 @@ ListView {
         // Column 2 - Row 1: Right
         Switch {
             enabled: depthEnabled
+            visible: hasStereo
             id: encRightSwitch
             x: 230
             y: 44
@@ -83,6 +84,7 @@ ListView {
 
         TextField {
             enabled: depthEnabled
+            visible: hasStereo
             id: encRightFps
             x: 367
             y: 44
@@ -100,6 +102,7 @@ ListView {
         // Column 1 - Row 2: Left
         Switch {
             enabled: depthEnabled
+            visible: hasStereo
             id: encLeftSwitch
             x: 8
             y: 77
@@ -115,6 +118,7 @@ ListView {
 
         TextField {
             enabled: depthEnabled
+            visible: hasStereo
             id: encLeftFps
             x: 145
             y: 77
@@ -206,6 +210,40 @@ ListView {
             placeholderText: qsTr("FPS")
             onEditingFinished: {
                 appBridge.toggleIrEncoding(encIrSwitch.checked, encIrFps.text)
+            }
+        }
+
+        // Column 1 - Row 4: ToF
+        Switch {
+            enabled: hasToF
+            visible: hasToF
+            id: encTofSwitch
+            x: 8
+            y: 143
+            width: 197
+            height: 27
+            text: qsTr("<font color=\"white\">ToF</font>")
+            bottomPadding: 5
+            checked: encodeTof
+            onToggled: {
+                appBridge.toggleTofEncoding(encTofSwitch.checked, encTofFps.text)
+            }
+        }
+
+        TextField {
+            enabled: hasToF
+            visible: hasToF
+            id: encTofFps
+            x: 145
+            y: 143
+            width: 60
+            height: 27
+            text: encodeTofFps.toString() // Assuming encodeTofFps property exists or we default to 30. Wait, need to add property to root.qml
+            bottomPadding: 7
+            validator: IntValidator {}
+            placeholderText: qsTr("FPS")
+            onEditingFinished: {
+               appBridge.toggleTofEncoding(encTofSwitch.checked, encTofFps.text)
             }
         }
 

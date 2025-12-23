@@ -662,7 +662,7 @@ class PipelineManager:
             ValueError: if cameraName is not a supported camera name
             RuntimeError: if specified camera node was not present
         """
-        allowedSources = [Previews.left.name, Previews.right.name, Previews.color.name, Previews.disparity.name, "ir"]
+        allowedSources = [Previews.left.name, Previews.right.name, Previews.color.name, Previews.disparity.name, Previews.depth.name, "tof", "ir"]
         if cameraName not in allowedSources:
             raise ValueError(
                 "Camera param invalid, received {}, available choices: {}".format(cameraName, allowedSources))
@@ -688,6 +688,14 @@ class PipelineManager:
             if not hasattr(self.nodes, 'stereo'):
                 raise RuntimeError("Stereo depth not initialized. Call createDepth() first!")
             encIn = self.nodes.stereo.disparity
+        elif cameraName == Previews.depth.name:
+            if not hasattr(self.nodes, 'stereo'):
+                raise RuntimeError("Stereo depth not initialized. Call createDepth() first!")
+            encIn = self.nodes.stereo.depth
+        elif cameraName == "tof":
+            if not hasattr(self.nodes, 'camTof'):
+                raise RuntimeError("ToF camera not initialized. Call createTofCam(res, fps) first!")
+            encIn = self.nodes.camTof.video
         elif cameraName == "ir":
             if not hasattr(self.nodes, 'monoLeft'):
                 raise RuntimeError("Left mono camera (IR) not initialized. Call createLeftCam(res, fps) first!")
@@ -703,6 +711,60 @@ class PipelineManager:
         enc.bitstream.link(encXout.input)
         encXout.setStreamName(xoutName)
         setattr(self.nodes, xoutName, encXout)
+
+    def createTofCam(self,
+        res=None,
+        fps=30,
+        orientation: dai.CameraImageOrientation=None,
+        xout=False,
+        xoutVideo=False,
+        control=True,
+        pipeline=None,
+        args=None,
+        ) -> dai.node.ColorCamera:
+        """
+        Creates :obj:`depthai.node.ColorCamera` node based on specified attributes, for ToF sensor
+        """
+        if pipeline is None:
+            pipeline = self.pipeline
+
+        if args is not None:
+             # Logic to find ToF socket from args won't work directly as args don't usually carry socket info easily for custom stuff
+             # But we can assume some defaults or pass it
+             pass
+
+        self.nodes.camTof = pipeline.createColorCamera()
+        # Find ToF socket? This class doesn't have device info. 
+        # We will assume caller sets the board socket if needed,/or we default to something? 
+        # Actually ColorCamera defaults to RGB. We need to set it. 
+        # For now, let's assume we rely on auto-detection or 'CAM_A' if not specified? 
+        # Better: caller (demo.py) should configure the node OR we assume generic usage.
+        # But wait, ToF is often treated as ColorCamera in DepthAI nodes for reading.
+        # Let's set a default resoluton.
+        
+        self.nodes.camTof.setBoardSocket(dai.CameraBoardSocket.RGB) # Default guess, often overridden
+        
+        if res is not None:
+            self.nodes.camTof.setResolution(res)
+        self.nodes.camTof.setFps(fps)
+        if orientation is not None:
+            self.nodes.camTof.setImageOrientation(orientation)
+
+        if xout:
+            self.nodes.xoutTof = pipeline.createXLinkOut()
+            self.nodes.xoutTof.setStreamName("tof")
+            if self.lowBandwidth and not self.lowCapabilities:
+                self._mjpegLink(self.nodes.camTof, self.nodes.xoutTof, self.nodes.camTof.video)
+            else:
+                self.nodes.camTof.video.link(self.nodes.xoutTof.input)
+                
+        if control:
+            self.nodes.xinTofControl = pipeline.createXLinkIn()
+            self.nodes.xinTofControl.setMaxDataSize(1024)
+            self.nodes.xinTofControl.setStreamName("tof_control")
+            self.nodes.xinTofControl.out.link(self.nodes.camTof.inputControl)
+
+        return self.nodes.camTof
 
     def enableLowBandwidth(self, poeQuality):
         """

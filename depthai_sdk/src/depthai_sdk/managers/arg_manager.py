@@ -9,6 +9,8 @@ def getRgbResolution(resolution: str):
     """
     Parses Color camera resolution based on the string
     """
+    if resolution is None:
+        return None
     resolution = str(resolution).upper()
     if resolution == '3120' or resolution == '13MP':
         return dai.ColorCameraProperties.SensorResolution.THE_13_MP
@@ -29,6 +31,8 @@ def getMonoResolution(resolution: str):
     """
     Parses Mono camera resolution based on the string
     """
+    if resolution is None:
+        return None
     resolution = str(resolution).upper()
     if resolution == '800' or resolution == '800P':
         return dai.MonoCameraProperties.SensorResolution.THE_800_P
@@ -111,8 +115,8 @@ class ArgsManager():
 
         parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
         parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
-        parser.add_argument('-dd', '--disableDepth', action="store_true", help="Disable depth information")
-        parser.add_argument('-dnn', '--disableNeuralNetwork', action="store_true", help="Disable neural network inference")
+        parser.add_argument('-dd', '--disableDepth', action="store_true", default=None, help="Disable depth information")
+        parser.add_argument('-dnn', '--disableNeuralNetwork', action="store_true", default=None, help="Disable neural network inference")
         parser.add_argument('-cnnp', '--cnnPath', type=Path, help="Path to cnn model directory to be run")
         parser.add_argument("-cnn", "--cnnModel", default="mobilenet-ssd", type=str,
                             help="Cnn model to run on DepthAI")
@@ -121,13 +125,13 @@ class ArgsManager():
                             help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
         
         # Color/Mono cam related arguments
-        parser.add_argument("-rgbr", "--rgbResolution", default='1080P', type=str,
+        parser.add_argument("-rgbr", "--rgbResolution", default=None, type=str,
                             help="RGB cam res height: (1920x)1080, (3840x)2160, (4056x)3040, (1280x)720, (1280x)800. Default: %(default)s")
-        parser.add_argument("-rgbf", "--rgbFps", default=30.0, type=float,
+        parser.add_argument("-rgbf", "--rgbFps", default=None, type=float,
                             help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
-        parser.add_argument("-monor", "--monoResolution", default='400P', type=str,
+        parser.add_argument("-monor", "--monoResolution", default=None, type=str,
                             help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
-        parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
+        parser.add_argument("-monof", "--monoFps", default=None, type=float,
                             help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
         parser.add_argument('-fps', '--fps', type=float, help='Camera FPS applied to all sensors')
 
@@ -174,7 +178,7 @@ class ArgsManager():
                             help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
         parser.add_argument('-dlrc', '--disableStereoLrCheck', action="store_false", dest="stereoLrCheck",
                             help="Disable stereo 'Left-Right check' feature.")
-        parser.add_argument('-ext', '--extendedDisparity', action="store_true",
+        parser.add_argument('-ext', '--extendedDisparity', action="store_true", default=None,
                             help="Enable stereo 'Extended Disparity' feature.")
         parser.add_argument('-sub', '--subpixel', action="store_true",
                             help="Enable stereo 'Subpixel' feature.")
@@ -190,7 +194,7 @@ class ArgsManager():
         parser.add_argument("-sbbsf", "--sbbScaleFactor", default=0.3, type=float,
                             help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
         
-        parser.add_argument('-s', '--show', default=[], nargs="+", choices=_streamChoices, help="Choose which previews to show. Default: %(default)s")
+        parser.add_argument('-s', '--show', default=None, nargs="+", choices=_streamChoices, help="Choose which previews to show. Default: %(default)s")
         parser.add_argument("-dff", "--disableFullFovNn", default=False, action="store_true",
                             help="Disable full RGB FOV for NN, keeping the nn aspect ratio")
         parser.add_argument('--report', nargs="+", default=[], choices=["temp", "cpu", "memory"], help="Display device utilization data")

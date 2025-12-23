@@ -13,68 +13,64 @@ ListView {
         id: cameraPreviewRect
         color: "black"
         width: parent.width
-        height: 640
-
-        ComboBox {
-            id: comboBoxImage
-            x: 100
-            y: 5
-            width: 150
-            height: 30
-            model: previewChoices
-            onActivated: function(index) {
-                previewBridge.changeSelected(model[index])
-            }
-        }
-
-        ComboBox {
-            id: comboBoxDevices
-            x: 260
-            y: 5
-            width: 200
-            height: 30
-            model: deviceChoices
-            onActivated: function(index) {
-                appBridge.selectDevice(model[index])
-            }
-        }
-
-        Button {
-            x: 470
-            y: 5
-            height: 30
-            width: 100
-            text: "Reload"
-            onClicked: appBridge.reloadDevices()
-        }
-
-        Button {
-            id: recordButton
-            x: 580
-            y: 5
-            height: 30
-            width: 100
-            text: recording ? "Stop" : "Record"
-            onClicked: appBridge.toggleRecording()
-        }
-
-        Button {
-            id: uploadButton
-            x: 690
-            y: 5
-            height: 30
-            width: 100
-            text: "Upload"
-            onClicked: appBridge.uploadFiles()
-        }
+        height: parent.height
 
         ImageWriter {
             id: imageWriter
             objectName: "writer"
-            x: 40
-            y: 40
-            width: parent.width - 80
-            height: parent.height - 80
+            anchors.fill: parent
+            anchors.margins: 10
+        }
+
+        RowLayout {
+            anchors.top: parent.top
+            anchors.topMargin: 10
+            anchors.horizontalCenter: parent.horizontalCenter
+            height: 50
+            spacing: 10
+
+            ComboBox {
+                id: comboBoxImage
+                Layout.preferredWidth: 150
+                Layout.fillHeight: true
+                model: previewChoices
+                onActivated: function(index) {
+                    previewBridge.changeSelected(model[index])
+                }
+            }
+
+            ComboBox {
+                id: comboBoxDevices
+                Layout.preferredWidth: 200
+                Layout.fillHeight: true
+                model: deviceChoices
+                onActivated: function(index) {
+                    appBridge.selectDevice(model[index])
+                }
+            }
+
+            Button {
+                Layout.preferredWidth: 100
+                Layout.fillHeight: true
+                text: "Reload"
+                onClicked: appBridge.reloadDevices()
+            }
+
+            Button {
+                id: recordButton
+                Layout.preferredWidth: 100
+                Layout.fillHeight: true
+                text: recording ? "Stop" : "Record"
+                onClicked: appBridge.toggleRecording()
+            }
+
+            Button {
+                id: uploadButton
+                Layout.preferredWidth: 100
+                Layout.fillHeight: true
+                text: "Upload"
+                onClicked: appBridge.uploadFiles()
+            }
         }
     }
 }
