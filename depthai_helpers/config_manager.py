@@ -14,6 +14,30 @@ DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
 DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
 DEPTHAI_VIDEOS.mkdir(exist_ok=True)
 
+TOFCAMERAS = ['OAK-D-SR-POE']
+STEREOCAMERAS = ['OAK-D-PRO-W']
+
+ColorCameraResolutions = [
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_720_P, 'width': 1280, 'height': 720},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_800_P, 'width': 1280, 'height': 800},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_1080_P, 'width': 1920, 'height': 1080},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_4_K, 'width': 3840, 'height': 2160},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_12_MP, 'width': 4056, 'height': 3040},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_13_MP, 'width': 4208, 'height': 3120},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_4000X3000, 'width': 4000, 'height': 3000},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_5312X6000, 'width': 5312, 'height': 6000},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_48_MP, 'width': 8000, 'height': 6000},
+    {'type': dai.ColorCameraProperties.SensorResolution.THE_1440X1080, 'width': 1440, 'height': 1080}
+]
+
+MonoCameraResolutions = [
+    {'type': dai.MonoCameraProperties.SensorResolution.THE_400_P, 'width': 640, 'height': 400},
+    {'type': dai.MonoCameraProperties.SensorResolution.THE_480_P, 'width': 640, 'height': 480},
+    {'type': dai.MonoCameraProperties.SensorResolution.THE_720_P, 'width': 1280, 'height': 720},
+    {'type': dai.MonoCameraProperties.SensorResolution.THE_800_P, 'width': 1280, 'height': 800},
+    {'type': dai.MonoCameraProperties.SensorResolution.THE_1200_P, 'width': 1920, 'height': 1200}
+]
+
 
 class ConfigManager:
     labels = ""
@@ -22,30 +46,73 @@ class ConfigManager:
     def __init__(self, args):
         self.args = args 
 
+        # Connect to the device
+        with dai.Device() as device:
+            cliPrint(f"Device connected: {device.getMxId()}", print_color=PrintColors.GREEN)
+            cliPrint(f"Device name: {device.getDeviceName()}", print_color=PrintColors.GREEN)
+            cliPrint("-" * 50, print_color=PrintColors.GREEN)
+            
+            self.device_id = device.getMxId()
+            self.device_name = device.getDeviceName()
+
+            # Get connected camera features
+            cliPrint("Connected Camera Features:", print_color=PrintColors.GREEN)
+            cameras = device.getConnectedCameraFeatures()
+            
+            self.cameras = cameras
+
+            resolutions = {}
+            for cam in cameras:
+                cliPrint(f"\nCamera on Socket: {cam.socket}", print_color=PrintColors.GREEN)
+                cliPrint(f"  Sensor Name: {cam.sensorName}", print_color=PrintColors.GREEN)
+                cliPrint(f"  Supported Types (Resolutions):", print_color=PrintColors.GREEN)
+                for config in cam.configs:
+                    resolutions[config.type.name] = {'width' : config.width, 'height' : config.height}
+
+            cliPrint(resolutions, print_color=PrintColors.GREEN)
+            # Example output for Oak TOF PoE: {'TOF': {'width': 1280, 'height': 3848}, 'COLOR': {'width': 640, 'height': 400}}  
+
+        self.resolutions = resolutions
+
         # Get resolution width as it's required by some functions
-        self.rgbResWidth = self.rgbResolutionWidth(self.args.rgbResolution)
+        if self.args.rgbResolution is not None:
+             try:
+                 self.rgbResWidth = self.rgbResolutionWidth(self.args.rgbResolution)
+             except:
+                 self.rgbResWidth = resolutions['COLOR']['width']
+        else:
+             self.rgbResWidth = resolutions['COLOR']['width']
+
+        # Ensure args.show is a list to prevent TypeError in GuiApp
+        if self.args.show is None:
+            self.args.show = []
 
         self.args.encode = dict(self.args.encode)
-        self.args.cameraOrientation = dict(self.args.cameraOrientation)
+        self.args.cameraOrientation = dict(self.args.cameraOrientation)      
+
+        # Initialize camera flags and sockets to defaults
+        self.hasStereo = self.device_name in STEREOCAMERAS
+        self.hasToF = self.device_name in TOFCAMERAS
+        if self.hasToF:
+            for cam in self.cameras:
+                if 'TOF' in [config.type.name for config in cam.configs]:
+                    self.tofSocket = cam.socket
+
+                if 'COLOR' in [config.type.name for config in cam.configs]:
+                    self.rgbSocket = cam.socket
+
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
             print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
 
-    def rgbResolutionWidth(self, res: dai.ColorCameraProperties.SensorResolution) -> int:
-        if res == dai.ColorCameraProperties.SensorResolution.THE_720_P: return 720
-        elif res == dai.ColorCameraProperties.SensorResolution.THE_800_P: return 800
-        elif res == dai.ColorCameraProperties.SensorResolution.THE_1080_P: return 1080
-        elif res == dai.ColorCameraProperties.SensorResolution.THE_4_K: return 2160
-        elif res == dai.ColorCameraProperties.SensorResolution.THE_12_MP: return 3040
-        elif res == dai.ColorCameraProperties.SensorResolution.THE_13_MP: return 3120
-        else: raise Exception('Resolution not supported!')
 
-    # Not needed, but might be useful for SDK in the future
-    # def _monoResWidth(self, res: dai.MonoCameraProperties.SensorResolution) -> int:
-    #     if res == dai.MonoCameraProperties.SensorResolution.THE_400_P: return 400
-    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_480_P: return 480
-    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_720_P: return 720
-    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_800_P: return 800
-    #     else: raise Exception('Resolution not supported!')
+    def rgbResolutionWidth(self, res: dai.ColorCameraProperties.SensorResolution) -> int:
+        width = ColorCameraResolutions.get(res, {}).get('width')
+        
+        if not width: 
+            raise Exception('Resolution not supported!')
+        
+        return width
+
 
     @property
     def debug(self):

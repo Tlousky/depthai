@@ -190,7 +190,18 @@ class Demo:
         self._conf = conf
         if self._conf.args.openvinoVersion:
             self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + self._conf.args.openvinoVersion)
-        self._deviceInfo = getDeviceInfo(self._conf.args.deviceId, args.debug)
+        
+        # Retry getting device info, as PoE devices might be flaky during discovery
+        for i in range(5):
+            try:
+                self._deviceInfo = getDeviceInfo(self._conf.args.deviceId, args.debug)
+                break
+            except RuntimeError as e:
+                print(f"Device not found yet, retrying... ({i+1}/5)")
+                if i == 4:
+                    raise e
+                time.sleep(1)
+
         if self._conf.args.reportFile:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
@@ -255,10 +266,11 @@ class Demo:
             if self._conf.rightCameraEnabled:
                 self._pm.createRightCam(args = self._conf.args)
             if self._conf.rgbCameraEnabled:
-                self._pm.createColorCam(args = self._conf.args)
+                self._pm.createColorCam(args = self._conf.args).setBoardSocket(self._conf.rgbSocket)
 
             if self._conf.useDepth:
-                self._pm.createDepth(args = self._conf.args)
+                if self._conf.hasStereo:
+                    self._pm.createDepth(args = self._conf.args)
 
             if self._conf.irEnabled(self._device):
                 self._pm.updateIrConfig(self._device, self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness)
@@ -270,10 +282,16 @@ class Demo:
             }
             
             # Add depth-related streams if depth is enabled
+            # Add depth-related streams if depth is enabled
             if self._conf.useDepth:
-                default_encode_config[Previews.left.name] = 30
-                default_encode_config[Previews.right.name] = 30
-                default_encode_config[Previews.disparity.name] = 30
+                if getattr(self._conf, 'hasStereo', True):
+                    default_encode_config[Previews.left.name] = 30
+                    default_encode_config[Previews.right.name] = 30
+                    default_encode_config[Previews.disparity.name] = 30
+                if getattr(self._conf, 'hasToF', False):
+                    # Create ToF camera node
+                    self._pm.createTofCam(args=self._conf.args).setBoardSocket(self._conf.tofSocket)
+                    default_encode_config["tof"] = 30
             
             self._encManager = EncodingManager(default_encode_config, self._conf.args.encodeOutput)
             self._encManager.createEncoders(self._pm)
