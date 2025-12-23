@@ -233,7 +233,7 @@ class ConfigManager:
         sensorNames = device.getCameraSensorNames()
         if dai.CameraBoardSocket.RGB in cams:
             name = sensorNames[dai.CameraBoardSocket.RGB]
-            if name == 'OV9782':
+            if (name == 'OV9782') or (self.device_name in TOFCAMERAS):
                 if self.rgbResWidth not in [720, 800]:
                     self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_800_P
                     cliPrint(f'{name} requires 720 or 800 resolution, defaulting to {self.args.rgbResolution}', 
