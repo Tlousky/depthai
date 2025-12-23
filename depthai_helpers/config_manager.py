@@ -97,7 +97,7 @@ class ConfigManager:
 
         for cam in self.cameras:
             config_names = [config.type.name for config in cam.configs]
-            if 'TOF' in config_names:
+            if cam.sensorName == 'S5K33D':
                 self.tofSocket = cam.socket
 
             if 'COLOR' in config_names:

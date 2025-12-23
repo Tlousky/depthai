@@ -161,6 +161,37 @@ class Demo:
         self._lastDepthFrame = None
         self._lastColorFrame = None
 
+    def setup_tof(self, tofSocket):
+        print("Creating TOF depth stream...")
+        tof = self._pm.pipeline.create(dai.node.ToF)
+
+        # Configure the ToF node
+        tofConfig = tof.initialConfig.get()
+
+        # Optional. Best accuracy, but adds motion blur.
+        # see ToF node docs on how to reduce/eliminate motion blur.
+        tofConfig.enableOpticalCorrection = True
+        tofConfig.enablePhaseShuffleTemporalFilter = True
+        tofConfig.phaseUnwrappingLevel = 4
+        tofConfig.phaseUnwrapErrorThreshold = 300
+
+        tofConfig.enableTemperatureCorrection = False # Not yet supported
+
+        # xinTofConfig = self._pm.pipeline.create(dai.node.XLinkIn)
+        # xinTofConfig.setStreamName("tofConfig")
+        # xinTofConfig.out.link(tof.inputConfig)
+
+        tof.initialConfig.set(tofConfig)
+
+        cam_tof = self._pm.pipeline.create(dai.node.Camera)
+        cam_tof.setFps(60) # ToF node will produce depth frames at /2 of this rate
+        cam_tof.setBoardSocket(tofSocket)
+        cam_tof.raw.link(tof.input)
+
+        xout = self._pm.pipeline.create(dai.node.XLinkOut)
+        xout.setStreamName("depth")
+        tof.depth.link(xout.input)
+
     def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
             self.onNewFrame = onNewFrame
@@ -268,9 +299,8 @@ class Demo:
             if self._conf.rgbCameraEnabled:
                 colorcam = self._pm.createColorCam(args = self._conf.args)
                 colorcam.setBoardSocket(self._conf.rgbSocket)
-            # if self._conf.tofCameraEnabled:
-            #     tofcamera = self._pm.createColorCam(args = self._conf.args)
-            #     tofcamera.setBoardSocket(self._conf.tofSocket)
+            if self._conf.tofCameraEnabled:
+                self.setup_tof(self._conf.tofSocket)
 
             if self._conf.useDepth:
                 if self._conf.hasStereo:

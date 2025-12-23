@@ -16,5 +16,5 @@
     "s3_bucket": "depthai-uploads-bplinks",
     "s3_region": "eu-north-1",
     "modelSource": "color",
-    "cnnModel": "openpose2"
+    "cnnModel": "mobilenet-ssd"
 }
