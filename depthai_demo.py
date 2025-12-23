@@ -161,36 +161,6 @@ class Demo:
         self._lastDepthFrame = None
         self._lastColorFrame = None
 
-    def setup_tof(self, tofSocket):
-        print("Creating TOF depth stream...")
-        tof = self._pm.pipeline.create(dai.node.ToF)
-
-        # Configure the ToF node
-        tofConfig = tof.initialConfig.get()
-
-        # Optional. Best accuracy, but adds motion blur.
-        # see ToF node docs on how to reduce/eliminate motion blur.
-        tofConfig.enableOpticalCorrection = True
-        tofConfig.enablePhaseShuffleTemporalFilter = True
-        tofConfig.phaseUnwrappingLevel = 4
-        tofConfig.phaseUnwrapErrorThreshold = 300
-
-        tofConfig.enableTemperatureCorrection = False # Not yet supported
-
-        # xinTofConfig = self._pm.pipeline.create(dai.node.XLinkIn)
-        # xinTofConfig.setStreamName("tofConfig")
-        # xinTofConfig.out.link(tof.inputConfig)
-
-        tof.initialConfig.set(tofConfig)
-
-        cam_tof = self._pm.pipeline.create(dai.node.Camera)
-        cam_tof.setFps(60) # ToF node will produce depth frames at /2 of this rate
-        cam_tof.setBoardSocket(tofSocket)
-        cam_tof.raw.link(tof.input)
-
-        xout = self._pm.pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName("tofDepth")
-        tof.depth.link(xout.input)
 
     def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
@@ -292,15 +262,19 @@ class Demo:
                                dispMultiplier=self._conf.dispMultiplier, mouseTracker=True, decode=self._conf.lowBandwidth and not self._conf.lowCapabilities,
                                fpsHandler=self._fps, createWindows=self._displayFrames, depthConfig=self._pm._depthConfig)
 
-            if self._conf.leftCameraEnabled:
-                self._pm.createLeftCam(args = self._conf.args)
-            if self._conf.rightCameraEnabled:
-                self._pm.createRightCam(args = self._conf.args)
+            if not self._conf.tofCameraEnabled:
+                if self._conf.leftCameraEnabled:
+                    self._pm.createLeftCam(args = self._conf.args)
+                if self._conf.rightCameraEnabled:
+                    self._pm.createRightCam(args = self._conf.args)
             if self._conf.rgbCameraEnabled:
                 colorcam = self._pm.createColorCam(args = self._conf.args)
                 colorcam.setBoardSocket(self._conf.rgbSocket)
             if self._conf.tofCameraEnabled:
-                self.setup_tof(self._conf.tofSocket)
+                self._pm.createTofCam(
+                    tofSocket=self._conf.tofSocket,
+                    xout=Previews.tofDepth.name in self._conf.args.show
+                )
 
             if self._conf.useDepth:
                 if self._conf.hasStereo:
@@ -407,6 +381,7 @@ class Demo:
 
     def run(self):
         self._device.startPipeline(self._pm.pipeline)
+
         self._pm.createDefaultQueues(self._device)
         if self._conf.useNN:
             self._nnManager.createQueues(self._device)
@@ -414,7 +389,7 @@ class Demo:
         self._sbbOut = self._device.getOutputQueue("sbb", maxSize=1, blocking=False) if self._conf.useNN and self._conf.args.spatialBoundingBox else None
         self._logOut = self._device.getOutputQueue("systemLogger", maxSize=30, blocking=False) if len(self._conf.args.report) > 0 else None
 
-        if self._conf.useDepth:
+        if self._conf.useDepth and self._conf.hasStereo:
             self._medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
             for medFilter in self._medianFilters:
                 # move the cycle to the current median filter
@@ -794,22 +769,28 @@ def runQt():
                 self.conf.args.show.append(Previews.color.name)
             if self.conf.useNN and Previews.nnInput.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.nnInput.name)
-            if self.conf.useDepth and not self.parent.useDisparity and Previews.depth.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.depth.name)
-            if self.conf.useDepth and not self.parent.useDisparity and Previews.depthRaw.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.depthRaw.name)
-            if self.conf.useDepth and self.parent.useDisparity and Previews.disparity.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.disparity.name)
-            if self.conf.useDepth and self.parent.useDisparity and Previews.disparityColor.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.disparityColor.name)
+            if self.conf.useDepth:
+                if self.conf.hasToF:
+                    if Previews.tofDepth.name not in self.conf.args.show:
+                        self.conf.args.show.append(Previews.tofDepth.name)
+                else: 
+                    if not self.parent.useDisparity and Previews.depth.name not in self.conf.args.show:
+                        self.conf.args.show.append(Previews.depth.name)
+                    if not self.parent.useDisparity and Previews.depthRaw.name not in self.conf.args.show:
+                        self.conf.args.show.append(Previews.depthRaw.name)
+                    if self.parent.useDisparity and Previews.disparity.name not in self.conf.args.show:
+                        self.conf.args.show.append(Previews.disparity.name)
+                    if self.parent.useDisparity and Previews.disparityColor.name not in self.conf.args.show:
+                        self.conf.args.show.append(Previews.disparityColor.name)
+                    if Previews.rectifiedLeft.name not in self.conf.args.show:
+                        self.conf.args.show.append(Previews.rectifiedLeft.name)
+                    if Previews.rectifiedRight.name not in self.conf.args.show:
+                        self.conf.args.show.append(Previews.rectifiedRight.name)
+
             if Previews.left.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.left.name)
-            if self.conf.useDepth and Previews.rectifiedLeft.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.rectifiedLeft.name)
             if Previews.right.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.right.name)
-            if self.conf.useDepth and Previews.rectifiedRight.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.rectifiedRight.name)
             try:
                 self.instance.run_all(self.conf)
             except KeyboardInterrupt:
@@ -1139,10 +1120,16 @@ def runQt():
         def guiOnSelectEncodingPath(self, value):
             self.updateArg("encodeOutput", value)
 
+
         def guiOnToggleDepth(self, value):
             self.updateArg("disableDepth", not value)
-            selectedPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name] + ([Previews.disparity.name, Previews.disparityColor.name] if self.useDisparity else [Previews.depth.name, Previews.depthRaw.name])
-            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
+            if hasattr(self.confManager, "hasToF") and self.confManager.hasToF:
+                selectedPreviews = [Previews.tofDepth.name]
+                depthPreviews = [Previews.tofDepth.name]
+            else:
+                selectedPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name] + ([Previews.disparity.name, Previews.disparityColor.name] if self.useDisparity else [Previews.depth.name, Previews.depthRaw.name])
+                depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
+
             filtered = list(filter(lambda name: name not in depthPreviews, self.confManager.args.show))
             if value:
                 updated = filtered + selectedPreviews

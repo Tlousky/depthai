@@ -356,6 +356,75 @@ class PipelineManager:
         if irFlood is not None:
             device.setIrFloodLightBrightness(irFlood)
 
+    def createTofCam(self,
+        tofSocket,
+        xout=False,
+        pipeline=None,
+        args=None):
+        """
+        Creates :obj:`depthai.node.ToF` node based on specified attributes
+
+        Args:
+            tofSocket (depthai.CameraBoardSocket): Camera socket to be used
+            xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
+            pipeline (depthai.Pipeline, Optional): Pipeline instance
+            args (Object, Optional): Arguments from the ArgsManager
+        """
+        if pipeline is None:
+            pipeline = self.pipeline
+
+        if args is not None:
+            return self.createTofCam(
+                tofSocket=args.tofSocket,
+                xout=Previews.tofDepth.name in args.show,
+                pipeline=pipeline,
+                args=args
+            )
+            
+            pipeline = dai.Pipeline()
+
+        tof = pipeline.create(dai.node.ToF)
+
+        # Configure the ToF node
+        tofConfig = tof.initialConfig.get()
+
+        # Optional. Best accuracy, but adds motion blur.
+        # see ToF node docs on how to reduce/eliminate motion blur.
+        tofConfig.enableOpticalCorrection = True
+        tofConfig.enablePhaseShuffleTemporalFilter = True
+        tofConfig.phaseUnwrappingLevel = 4
+        tofConfig.phaseUnwrapErrorThreshold = 300
+
+        tofConfig.enableTemperatureCorrection = False # Not yet supported
+
+        xinTofConfig = pipeline.create(dai.node.XLinkIn)
+        xinTofConfig.setStreamName("tofConfig")
+        xinTofConfig.out.link(tof.inputConfig)
+
+        tof.initialConfig.set(tofConfig)
+
+        cam_tof = pipeline.create(dai.node.Camera)
+        cam_tof.setFps(60) # ToF node will produce depth frames at /2 of this rate
+        cam_tof.setBoardSocket(dai.CameraBoardSocket.CAM_A)
+        cam_tof.raw.link(tof.input)
+
+        xout = pipeline.create(dai.node.XLinkOut)
+        xout.setStreamName("depth")
+        tof.depth.link(xout.input)
+
+        self.nodes.tof = tof
+        self.nodes.cam_tof = cam_tof
+        self.nodes.tof_xout = xout
+
+        self.nodes.tofConfig = tof.initialConfig.get()
+
+        if xout:
+            self.nodes.xoutTofDepth = pipeline.createXLinkOut()
+            self.nodes.xoutTofDepth.setStreamName(Previews.tofDepth.name)
+            self.nodes.tof.depth.link(self.nodes.xoutTofDepth.input)
+
+        return self.nodes.tof
+
     def createDepth(self,
         dct=245,
         median=None,

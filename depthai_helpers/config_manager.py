@@ -101,10 +101,11 @@ class ConfigManager:
 
         for cam in self.cameras:
             config_names = [config.type.name for config in cam.configs]
+            
             if cam.sensorName == 'S5K33D':
                 self.tofSocket = cam.socket
 
-            if 'COLOR' in config_names:
+            if ('COLOR' in config_names) and (cam.sensorName != 'S5K33D'):
                 self.rgbSocket = cam.socket
 
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
@@ -211,12 +212,21 @@ class ConfigManager:
                 Previews.tofDepth.name
             ]
 
-            if len([preview for preview in self.args.show if preview in depthPreviews]) == 0 and not self.useNN:
+            if (
+                (len([preview for preview in self.args.show if preview in depthPreviews]) == 0) 
+                and not self.useNN 
+                and not self.hasToF
+            ):
                 print("No depth-related previews chosen, disabling depth...")
                 self.args.disableDepth = True
-            return
+                return
 
         self.args.show.append(Previews.color.name)
+        
+        if self.hasToF:
+            self.args.show.append(Previews.tofDepth.name)
+            return
+        
         if self.useDepth:
             self.args.show.append(Previews.disparityColor.name)
 
@@ -231,8 +241,6 @@ class ConfigManager:
                     self.args.show.append(Previews.depthRaw.name)
                 self.args.show.append(Previews.rectifiedLeft.name)
                 self.args.show.append(Previews.rectifiedRight.name)
-            elif self.hasToF:
-                self.args.show.append(Previews.tofDepth.name)
             else:
                 self.args.show.append(Previews.left.name)
                 self.args.show.append(Previews.right.name)
