@@ -157,6 +157,18 @@ class AppBridge(QObject):
         ConfigHandler().set_value("encodeIrFps", fps)
         instance.guiOnToggleIrEncoding(enabled, fps)
 
+    @pyqtSlot(bool, int)
+    def toggleTofEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeTof", enabled)
+        ConfigHandler().set_value("encodeTofFps", fps)
+        instance.guiOnToggleTofEncoding(enabled, fps)
+
+    @pyqtSlot(bool, int)
+    def toggleTofEncoding(self, enabled, fps):
+        ConfigHandler().set_value("encodeTof", enabled)
+        ConfigHandler().set_value("encodeTofFps", fps)
+        instance.guiOnToggleTofEncoding(enabled, fps)
+
     @pyqtSlot()
     def toggleRecording(self):
         instance.guiOnToggleRecording()
@@ -477,6 +489,15 @@ class DemoQtGui:
                 setupFrame = cv2.cvtColor(setupFrame, cv2.COLOR_RGB2BGR)
         img = QImage(setupFrame.data, w, h, setupFrame.shape[2] * w, colorMode)
         self.writer.update_frame(img)
+
+    def guiOnToggleTofEncoding(self, enabled, fps):
+        self.setData(["encodeTof", enabled])
+        self.setData(["encodeTofFps", fps])
+        if hasattr(self, 'confManager'):
+            if enabled:
+                self.confManager.args.encode["tof"] = fps
+            elif "tof" in self.confManager.args.encode:
+                del self.confManager.args.encode["tof"]
 
     def startGui(self):
         self.writer = self.window.findChild(QObject, "writer")
@@ -910,6 +931,20 @@ class DemoQtGui:
             self.setData(["encodeIrFps", config.get_value("encodeIrFps")])
             # IR encoding might not be supported in args.encode directly or needs mapping
             pass
+
+        if config.get_value("encodeTof") is not None and config.get_value("encodeTofFps") is not None:
+            self.setData(["encodeTof", config.get_value("encodeTof")])
+            self.setData(["encodeTofFps", config.get_value("encodeTofFps")])
+            if config.get_value("encodeTof"):
+                if hasattr(self, 'confManager'):
+                    self.confManager.args.encode["tof"] = config.get_value("encodeTofFps")
+
+        if config.get_value("encodeTof") is not None and config.get_value("encodeTofFps") is not None:
+            self.setData(["encodeTof", config.get_value("encodeTof")])
+            self.setData(["encodeTofFps", config.get_value("encodeTofFps")])
+            if config.get_value("encodeTof"):
+                if hasattr(self, 'confManager'):
+                    self.confManager.args.encode["tof"] = config.get_value("encodeTofFps")
 
         if config.get_value("encodePointCloud") is not None:
             self.setData(["encodePointCloud", config.get_value("encodePointCloud")])

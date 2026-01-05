@@ -35,7 +35,7 @@ class EncodingManager:
         self._encodingNodes.clear()
         for cameraName, encFps in self.encodeConfig.items():
             pm.createEncoder(cameraName, encFps)
-            self._encodingNodes[cameraName] = getattr(pm.nodes, cameraName + "Enc")
+            self._encodingNodes[cameraName] = getattr(pm.nodes, cameraName.lower() + "Enc")
 
     def createDefaultQueues(self, device):
         """
@@ -45,6 +45,8 @@ class EncodingManager:
         self._encodingFiles.clear()
 
         for cameraName, node in self._encodingNodes.items():
+            if cameraName == 'tofDepth':
+                cameraName = cameraName.lower()
             self._encodingQueues[cameraName] = device.getOutputQueue(cameraName + "EncXout", maxSize=30, blocking=True)
 
     def startRecording(self, output_path=None, enabled_streams=None, filename_prefix=None):

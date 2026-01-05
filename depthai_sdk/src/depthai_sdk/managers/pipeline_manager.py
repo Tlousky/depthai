@@ -100,12 +100,13 @@ class PipelineManager:
             h -= 1
         return w, h
 
-    def _mjpegLink(self, node, xout, nodeOutput):
+    def _mjpegLink(self, node, xout, nodeOutput, custom_res=None):
         print("Creating MJPEG link for {} node and {} xlink stream...".format(node.getName(), xout.getStreamName()))
         videnc = self.pipeline.createVideoEncoder()
-        if isinstance(node, dai.node.ColorCamera):
+        if type(node) in [dai.node.ColorCamera, dai.node.Camera, dai.node.ToF]:
             if node.video == nodeOutput:
-                size = self.__calcEncodeableSize(node.getVideoSize())
+                video_size = custom_res if custom_res else node.getVideoSize()
+                size = self.__calcEncodeableSize(video_size)
                 node.setVideoSize(size)
                 videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.preview == nodeOutput:
@@ -357,7 +358,6 @@ class PipelineManager:
             device.setIrFloodLightBrightness(irFlood)
 
     def createTofCam(self,
-        tofSocket,
         xout=False,
         pipeline=None,
         args=None):
@@ -365,7 +365,6 @@ class PipelineManager:
         Creates :obj:`depthai.node.ToF` node based on specified attributes
 
         Args:
-            tofSocket (depthai.CameraBoardSocket): Camera socket to be used
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
             pipeline (depthai.Pipeline, Optional): Pipeline instance
             args (Object, Optional): Arguments from the ArgsManager
@@ -405,25 +404,23 @@ class PipelineManager:
 
         cam_tof = pipeline.create(dai.node.Camera)
         cam_tof.setFps(60) # ToF node will produce depth frames at /2 of this rate
+        # cam_tof.setVideoSize((640, 400))
         cam_tof.setBoardSocket(dai.CameraBoardSocket.CAM_A)
         cam_tof.raw.link(tof.input)
 
         xout = pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName("depth")
+        xout.setStreamName("tofDepth")
         tof.depth.link(xout.input)
-
-        self.nodes.tof = tof
+               
+        self.nodes.tofDepth = tof
         self.nodes.cam_tof = cam_tof
         self.nodes.tof_xout = xout
 
         self.nodes.tofConfig = tof.initialConfig.get()
 
-        if xout:
-            self.nodes.xoutTofDepth = pipeline.createXLinkOut()
-            self.nodes.xoutTofDepth.setStreamName(Previews.tofDepth.name)
-            self.nodes.tof.depth.link(self.nodes.xoutTofDepth.input)
+        self.nodes.xoutTofDepth = xout
 
-        return self.nodes.tof
+        return self.nodes.tofDepth
 
     def createDepth(self,
         dct=245,
@@ -731,7 +728,7 @@ class PipelineManager:
             ValueError: if cameraName is not a supported camera name
             RuntimeError: if specified camera node was not present
         """
-        allowedSources = [Previews.left.name, Previews.right.name, Previews.color.name, Previews.disparity.name, "ir"]
+        allowedSources = [Previews.left.name, Previews.right.name, Previews.color.name, Previews.disparity.name, "ir", Previews.tofDepth.name]
         if cameraName not in allowedSources:
             raise ValueError(
                 "Camera param invalid, received {}, available choices: {}".format(cameraName, allowedSources))
@@ -761,6 +758,17 @@ class PipelineManager:
             if not hasattr(self.nodes, 'monoLeft'):
                 raise RuntimeError("Left mono camera (IR) not initialized. Call createLeftCam(res, fps) first!")
             encIn = self.nodes.monoLeft.out
+        elif cameraName == Previews.tofDepth.name:
+            if not hasattr(self.nodes, 'tofDepth'):
+                raise RuntimeError("TOF depth not initialized. Call createTofDepth() first!")
+            encIn = self.nodes.tofDepth.depth
+            
+            # ToF produces 16-bit frames (type 14), which are not supported by VideoEncoder.
+            # We need to convert them to NV12 (8-bit) using ImageManip.
+            # tofEncManip = self.pipeline.createImageManip()
+            # tofEncManip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+            # self.nodes.tofDepth.depth.link(tofEncManip.inputImage)
+            # encIn = tofEncManip.out
 
         enc = self.pipeline.createVideoEncoder()
         enc.setDefaultProfilePreset(encFps, encProfile)

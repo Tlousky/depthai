@@ -272,7 +272,7 @@ class Demo:
                 colorcam.setBoardSocket(self._conf.rgbSocket)
             if self._conf.tofCameraEnabled:
                 self._pm.createTofCam(
-                    tofSocket=self._conf.tofSocket,
+                    # tofSocket=self._conf.tofSocket,
                     xout=Previews.tofDepth.name in self._conf.args.show
                 )
 
@@ -296,6 +296,10 @@ class Demo:
                     default_encode_config[Previews.left.name] = 30
                     default_encode_config[Previews.right.name] = 30
                     default_encode_config[Previews.disparity.name] = 30
+            
+            # Add ToF depth encoding if enabled
+            if self._conf.hasToF:
+                default_encode_config[Previews.tofDepth.name] = 30
             
             self._encManager = EncodingManager(default_encode_config, self._conf.args.encodeOutput)
             self._encManager.createEncoders(self._pm)

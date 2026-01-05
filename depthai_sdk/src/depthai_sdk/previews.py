@@ -238,7 +238,10 @@ class PreviewDecoder:
         """
         frame = packet.getFrame()
         frame = cv2.normalize(frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-        return cv2.applyColorMap(frame, manager.colorMap if manager is not None else cv2.COLORMAP_JET)
+        colorframe = cv2.applyColorMap(
+            frame, manager.colorMap if manager is not None else cv2.COLORMAP_JET
+        ).astype(np.uint8)
+        return colorframe
 
 
 class Previews(enum.Enum):

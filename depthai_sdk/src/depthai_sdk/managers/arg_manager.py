@@ -45,7 +45,7 @@ try:
     _colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
 except:
     _colorMaps = None
-_streamChoices = ("nnInput", "color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
+_streamChoices = ("nnInput", "color", "left", "right", "depth", "tofDepth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
 _openvinoVersions = [v.replace("VERSION_", "") for v in vars(dai.OpenVINO.Version) if v.startswith("VERSION_")]
 _orientationChoices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraImageOrientation)))
 

@@ -13,8 +13,11 @@
     "encodeRightFps": 30,
     "encodeLeft": true,
     "encodeLeftFps": 30,
+    "encodeTof": true,
+    "encodeTofFps": 30,
     "s3_bucket": "depthai-uploads-bplinks",
     "s3_region": "eu-north-1",
     "modelSource": "color",
-    "cnnModel": "mobilenet-ssd"
+    "cnnModel": "mobilenet-ssd",
+    "encodeOutput": "E:\\CamTest"
 }
